@@ -1,7 +1,10 @@
 (ns ^{:author "Daniel Leong"
       :doc "Modal input state machine"}
   xradar.input
-  (:require [xradar.commands :as c]))
+  (:require [xradar
+             [bindings :refer [default-bindings]]
+             [commands :as c]
+             [util :refer [deep-merge]]]))
 
 (defn- match-key [matcher event]
   (if (keyword? matcher)
@@ -28,20 +31,22 @@
 (defmethod pressed-in-mode :insert
   [machine state]
   (exec-press
-     :esc c/stop-insert
-     ;; default handler
-     c/handle-insert))
+    :esc c/stop-insert
+    ;; default handler
+    c/handle-insert))
 ;
 (defmethod pressed-in-mode :normal
   [machine state]
   (exec-press
-     :i c/start-insert
-     :s c/start-select-aircraft))
+    :i c/start-insert
+    :s c/start-select-aircraft))
 ;
 (defmethod pressed-in-mode :default
   [machine state]
-  ;; just return the machine
-  machine)
+  (exec-press
+    :esc c/stop-insert
+    ;; just return the machine
+    machine))
 
 
 (defn- add-modifier
@@ -67,8 +72,7 @@
     ;; default
     (let [modded-event (assoc event :modifiers (:modifiers machine))]
       (pressed-in-mode (assoc machine :last-press modded-event)
-                       state
-                       modded-event))))
+                       state))))
 
 (defn- process-release
   "Process key release. Returns the new value of the input machine"
@@ -104,7 +108,11 @@
 
 
 (defn create-input 
-  "Prepare a new input machine"
-  []
+  "Prepare a new input machine, given a profile map."
+  [profile]
   (atom {:mode :normal
-         :modifiers #{}}))
+         :modifiers #{}
+         :insert-buffer []
+         :bindings (deep-merge
+                     default-bindings
+                     (:bindings profile))}))

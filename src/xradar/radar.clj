@@ -30,6 +30,7 @@
   (merge {:mode (create-mode)
           :scheme schemes/default
           :size default-size
+          :timeout-len 1000 ;; time before a key sequence is dropped
           :win-position default-location}
          profile))
 
@@ -68,15 +69,25 @@
   (q/frame-rate fps)
   (q/background (get-in @state-atom [:profile :scheme :background]))
   {:radar-state state-atom
-   :input (create-input)})
+   :input (create-input (-> @state-atom :profile))})
 
 (defn draw [state]
   (let [radar @(:radar-state state)
+        input @(:input state)
         scheme (-> radar :profile :scheme)
         mode (-> radar :profile :mode)]
     (q/background (:background scheme))
     (doseq [[cid craft] (-> radar :aircraft)]
       (m/draw-aircraft mode scheme craft))
+    (case mode
+      ;; insert mode; draw the input buffer
+      :insert
+      (do
+        (q/stroke 0xFFF) ;; TODO color scheme
+        (q/text (str (:insert-buffer input))))
+      ;; default; do nothing
+      nil)
+    ;; debugging
     (q/stroke 0xFFF)
     (q/text (describe-input (-> state :input)) 10 (- (q/height) 10)))
   ;; ensure the state is returned
