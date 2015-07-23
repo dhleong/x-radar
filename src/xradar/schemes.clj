@@ -5,5 +5,6 @@
 (def default
   {:background 100
    :aircraft 
-   {:untracked 0x00EE00
-    :tracked 0x00FF00}})
+   {:untracked 0xff00EE00
+    :tracked 0xff00FF00
+    :selected 0xffFFFFFF}})

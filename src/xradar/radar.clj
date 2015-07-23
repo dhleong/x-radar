@@ -75,10 +75,18 @@
   (let [radar @(:radar-state state)
         input @(:input state)
         scheme (-> radar :profile :scheme)
-        mode (-> radar :profile :mode)]
+        mode (-> radar :profile :mode)
+        selected (-> radar :selected)
+        aircraft (-> radar :aircraft)]
     (q/background (:background scheme))
-    (doseq [[cid craft] (-> radar :aircraft)]
-      (m/draw-aircraft mode scheme craft))
+    (if-let [selected-craft (get aircraft selected nil)]
+      (q/text (str selected-craft) 10 (- (q/height) 30)))
+    (doseq [[cid craft] aircraft]
+      (let [updated-craft
+            (if (= selected (:cid craft))
+              (assoc craft :state :selected)
+              craft)]
+        (m/draw-aircraft mode scheme updated-craft)))
     (case mode
       ;; insert mode; draw the input buffer
       :insert
@@ -88,7 +96,7 @@
       ;; default; do nothing
       nil)
     ;; debugging
-    (q/stroke 0xFFF)
+    (q/fill-int 0xffFFFFFF)
     (q/text (describe-input (-> state :input)) 10 (- (q/height) 10)))
   ;; ensure the state is returned
   state)

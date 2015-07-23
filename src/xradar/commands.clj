@@ -4,7 +4,8 @@
            machine is the input state machine map, and
            state is the radar's state atom. The return
            value MUST be the new machine state, if any."}
-  xradar.commands)
+  xradar.commands
+  (:require [xradar.aircraft-selection :refer [aircraft-to-bindings]]))
 
 (defn switch-mode
   [machine state new-mode]
@@ -12,25 +13,22 @@
          :mode new-mode
          :current-bindings (get-in machine [:bindings new-mode] {})))
 
-(defn eval-command
-  [machine state raw]
-  (if-let [command (ns-resolve 'xradar.commands (symbol raw))]
-    (command machine state)
-    (echo machine state (str "No such command: " raw))))
-
-(defn echo
-  [machine state & values]
-  ;; TODO
-  (println values))
+(defmacro to-mode
+  [new-mode]
+  `(switch-mode ~'machine ~'state ~new-mode))
 
 (defn start-insert
   [machine state]
-  (switch-mode machine state :insert))
+  (to-mode :insert))
 
 (defn stop-insert
   [machine state]
   ;; TODO clean up state
-  (assoc (switch-mode machine state :normal)
+  (if (= :normal (:mode machine))
+    ;; if this is called when already in normal mode,
+    ;;  we clear the selected aircraft
+    (swap! state #(assoc % :selected nil)))
+  (assoc (to-mode :normal)
          :insert-buffer []))
 
 (defn handle-insert
@@ -52,7 +50,37 @@
            (conj (:insert-buffer machine)
                  (:raw-key last-press))))))
 
+(defn echo
+  [machine state & values]
+  ;; TODO
+  (println values)
+  (assoc (stop-insert machine state)
+         :last-echo values))
+
+(defn eval-command
+  [machine state raw]
+  (let [raw-symbol? (or (symbol? raw) (string? raw))
+        command (if raw-symbol?
+                  (ns-resolve 'xradar.commands (symbol raw)))]
+    (cond 
+      ;; valid command? execute
+      command (command machine state)
+      ;; form? insert machine/state and execute
+      (seq raw)
+      (if-let [list-cmd (ns-resolve 'xradar.commands (first raw))]
+        (apply list-cmd machine state (rest raw))
+        (echo machine state (str "No such command:" (first raw))))
+      ;; no such thing :(
+      :else (echo machine state (str "No such command:" raw)))))
+
 (defn start-select-aircraft
   [machine state]
-  (switch-mode machine state :select-aircraft))
+  (let [craft (:aircraft @state)
+        aircraft-selections (aircraft-to-bindings craft 'select-aircraft)]
+    (assoc (to-mode :select-aircraft)
+           :current-bindings aircraft-selections)))
 
+(defn select-aircraft
+  [machine state cid]
+  (swap! state #(assoc % :selected cid))
+  (to-mode :normal))

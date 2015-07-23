@@ -2,6 +2,8 @@
       :doc "Modal input state machine"}
   xradar.input
   (:require [clojure.string :refer [join lower-case]]
+            [quil
+             [applet :refer [applet-close]]]
             [xradar
              [bindings :refer [read-default-bindings]]
              [commands :as c]
@@ -43,14 +45,15 @@
 ;
 (defmethod pressed-in-mode :normal
   [machine state]
-  (exec-press))
+  (exec-press
+    ;; NB: clojure doesn't like us cross-referencing
+    ;;  the destroy-radar method...
+    :cmd-w (applet-close (:sketch @state))))
 ;
 (defmethod pressed-in-mode :default
   [machine state]
   (exec-press
-    :esc c/stop-insert
-    ;; just return the machine
-    machine))
+    :esc c/stop-insert))
 
 (defn translate-event
   "Given a key event and the current machine state,
@@ -142,7 +145,7 @@
   [machine-atom]
   ;; TODO
   (let [machine @machine-atom]
-    (str (select-keys machine [:current-bindings :mode]))))
+    (str (select-keys machine [:current-bindings :mode :selected]))))
 
 (defn process-input-press
   "Process key pressed and update the machine"
