@@ -34,7 +34,13 @@
   "Read a key mapping"
   [parts value]
   (let [[_ mode mapping-string] parts
-        mapping (map #(-> % str keyword) mapping-string)]
+        mapping-parts (re-seq #"(<([^>]+)>|\w)" mapping-string)
+        mapping (map (fn [[_ simple special]]
+                       (keyword 
+                         (if (nil? special)
+                           simple
+                           special)))
+                     mapping-parts)]
     {(keyword mode) (assoc-in {} mapping {:call value})}))
 
 (defn- read-set

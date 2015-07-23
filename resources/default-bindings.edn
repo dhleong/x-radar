@@ -2,6 +2,8 @@
 #map/normal/i start-insert
 #map/normal/s start-select-aircraft
 
+#map/normal/<esc> stop-insert
+
 ; planned; demos multi-key maps
 #map/normal/od toggle-departures
 #map/normal/of toggle-flight-strips
