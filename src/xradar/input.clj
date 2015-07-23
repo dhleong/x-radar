@@ -1,10 +1,12 @@
 (ns ^{:author "Daniel Leong"
       :doc "Modal input state machine"}
   xradar.input
-  (:require [xradar
-             [bindings :refer [default-bindings]]
+  (:require [clojure.string :refer [join lower-case]]
+            [xradar
+             [bindings :refer [read-default-bindings]]
              [commands :as c]
-             [util :refer [deep-merge]]]))
+             [util :refer [deep-merge]]])
+  (:import [java.awt.event KeyEvent]))
 
 (defn- match-key [matcher event]
   (if (keyword? matcher)
@@ -48,6 +50,29 @@
     ;; just return the machine
     machine))
 
+(defn translate-event
+  "Given a key event and the current machine state,
+  return an translated event whose :key value will
+  map exactly to a key mapping form (eg: :alt-L if
+  `l` is pressed while `alt` and `shift` are also
+  pressed)"
+  [machine event]
+  (let [key-raw (case (:key-code event)
+                  27 "ESC"
+                  9 "TAB"
+                  ;; default; fetch
+                  (KeyEvent/getKeyText (:key-code event)))
+        modifiers (:modifiers machine)
+        shifted (contains? modifiers :shift)
+        key-label (if shifted key-raw (lower-case key-raw))
+        mods (->> modifiers
+                  (filter #(not= % :shift))
+                  sort
+                  (map name)
+                  (join "-"))
+        key-name-parts (->> [mods key-label]
+                            (remove empty?))]
+    (assoc event :key (keyword (join "-" key-name-parts)))))
 
 (defn- add-modifier
   [machine modifier]
@@ -67,10 +92,10 @@
   (case (:key event)
     :shift (add-modifier machine :shift)
     :alt (add-modifier machine :alt)
-    :command (add-modifier machine :command)
-    :control (add-modifier machine :control)
+    :command (add-modifier machine :cmd)
+    :control (add-modifier machine :ctrl)
     ;; default
-    (let [modded-event (assoc event :modifiers (:modifiers machine))]
+    (let [modded-event (translate-event machine event)]
       (pressed-in-mode (assoc machine :last-press modded-event)
                        state))))
 
@@ -80,8 +105,8 @@
   (case (:key event)
     :shift (remove-modifier machine :shift)
     :alt (remove-modifier machine :alt)
-    :command (remove-modifier machine :command)
-    :control (remove-modifier machine :control)
+    :command (remove-modifier machine :cmd)
+    :control (remove-modifier machine :ctrl)
     ;; default
     machine))
 
@@ -106,13 +131,18 @@
   [machine-atom event]
   (swap! machine-atom process-release event))
 
-
 (defn create-input 
   "Prepare a new input machine, given a profile map."
   [profile]
-  (atom {:mode :normal
-         :modifiers #{}
-         :insert-buffer []
-         :bindings (deep-merge
-                     default-bindings
-                     (:bindings profile))}))
+  (let [defaults (read-default-bindings)
+        merged-bindings (deep-merge
+                          (:bindings defaults)
+                          (:bindings profile))]
+    (atom {:mode :normal
+           :modifiers #{}
+           :insert-buffer []
+           :bindings merged-bindings
+           :current-bindings merged-bindings
+           :settings (deep-merge
+                       (:settings defaults)
+                       (:settings profile))})))

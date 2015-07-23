@@ -23,6 +23,13 @@
          :mode
          :insert))
 
+(defn stop-insert
+  [machine state]
+  ;; TODO clean up state
+  (assoc machine
+         :insert-buffer []
+         :mode :normal))
+
 (defn handle-insert
   [machine state]
   ;; FIXME
@@ -41,13 +48,6 @@
            :insert-buffer
            (conj (:insert-buffer machine)
                  (:raw-key last-press))))))
-
-(defn stop-insert
-  [machine state]
-  ;; TODO clean up state
-  (assoc machine
-         :insert-buffer []
-         :mode :normal))
 
 (defn start-select-aircraft
   [machine state]
