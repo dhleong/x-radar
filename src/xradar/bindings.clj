@@ -33,16 +33,24 @@
 (defn- read-map
   "Read a key mapping"
   [parts value]
-  ;; FIXME split up multi-key mappings
-  (let [[_ mode mapping] parts]
-    {(keyword mode) {(keyword mapping) {:call value}}}))
+  (let [[_ mode mapping-string] parts
+        mapping (map #(-> % str keyword) mapping-string)]
+    {(keyword mode) (assoc-in {} mapping {:call value})}))
+
+(defn- read-set
+  "Read a setting"
+  [parts value]
+  (let [[_ setting] parts]
+    {(keyword setting) value}))
 
 (defn- read-binding
   [tag value]
   (let [parts (split (str tag) #"/")
         command (first parts)]
     (case command
-      "map" {:bindings (read-map parts value)})))
+      "map" {:bindings (read-map parts value)}
+      "set" {:settings (read-set parts value)}
+      (println "Unsupported command" command))))
 
 (defn read-bindings
   [reader]
@@ -50,9 +58,9 @@
         input (java.io.PushbackReader. reader)]
     (loop [result {}]
       (let [read-val (edn/read {:default binding-fn
-                                :eof nil} 
+                                :eof :eof} 
                                input)]
-        (if (nil? read-val)
+        (if (= :eof read-val)
           result
           (recur (deep-merge result read-val)))))))
 
