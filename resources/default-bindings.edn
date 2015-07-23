@@ -1,0 +1,7 @@
+
+#map/normal/i start-insert
+#map/normal/s start-select-aircraft
+
+; planned; demos multi-key maps
+#map/normal/od toggle-departures
+#map/normal/of toggle-flight-strips
