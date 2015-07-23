@@ -33,10 +33,22 @@
                        (with-mods :command :alt :shift :control) original)]
       (is (= {:key :alt-cmd-ctrl-L :key-code 76} translated)))))
 
-(deftest pressed-in-mode-test
-  (testing "start insert"
-    (let [original {:mode :normal :last-press {:key :i}}
+(deftest process-press-test
+  (testing "Start insert"
+    (let [original (empty) 
+          state (atom {})
+          machine (process-press original {:key :i :key-code 73} state)]
+      (is (= :insert (:mode machine)))))
+  (testing "Multi-key map"
+    (let [original (empty)
+          state (atom {})
+          machine (process-press original {:key :o :key-code 79} state)]
+      (is (contains? (:current-bindings machine) :f))))
+  (testing "Insert text"
+    (let [original {:mode :insert 
+                    :insert-buffer [] 
+                    :last-press {:key :h :raw-key \h}}
           state (atom {})
           machine (pressed-in-mode original state)]
-      (is (= :insert (:mode machine))))))
+      (is (= [\h] (:insert-buffer machine))))))
 

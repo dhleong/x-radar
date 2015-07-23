@@ -6,6 +6,12 @@
            value MUST be the new machine state, if any."}
   xradar.commands)
 
+(defn switch-mode
+  [machine state new-mode]
+  (assoc machine
+         :mode new-mode
+         :current-bindings (get-in machine [:bindings new-mode] {})))
+
 (defn eval-command
   [machine state raw]
   (if-let [command (ns-resolve 'xradar.commands (symbol raw))]
@@ -19,16 +25,13 @@
 
 (defn start-insert
   [machine state]
-  (assoc machine
-         :mode
-         :insert))
+  (switch-mode machine state :insert))
 
 (defn stop-insert
   [machine state]
   ;; TODO clean up state
-  (assoc machine
-         :insert-buffer []
-         :mode :normal))
+  (assoc (switch-mode machine state :normal)
+         :insert-buffer []))
 
 (defn handle-insert
   [machine state]
@@ -51,7 +54,5 @@
 
 (defn start-select-aircraft
   [machine state]
-  (assoc machine
-         :mode
-         :select-aircraft))
+  (switch-mode machine state :select-aircraft))
 
