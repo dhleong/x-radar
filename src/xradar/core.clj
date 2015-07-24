@@ -1,6 +1,8 @@
 (ns xradar.core
   (:require [seesaw.core :refer [native!]]
-            [xradar.radar :refer [create-radar update-aircraft]])
+            [xradar
+             [radar :refer [create-radar]]
+             [radar-util :refer [update-aircraft]]])
   (:gen-class))
 
 (defn -main

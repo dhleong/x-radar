@@ -3,12 +3,13 @@
   xradar.radar
   (:require [clojure.string :refer [join]]
             [quil
-             [core :as q]
-             [applet :refer [applet-close]]
+             [core :as q] 
              [middleware :as qm]]
             [xradar
              [input :refer [create-input describe-input 
                             process-input-press process-input-release]]
+             [network :refer [XRadarNetwork]]
+             [radar-util :refer [update-aircraft]]
              [schemes :as schemes]
              [mode :as m :refer [RadarMode]]]
             [xradar.modes.xradar-mode :refer [create-mode]]))
@@ -149,20 +150,11 @@
 ;; Public interface
 ;;
 
-(defn update-aircraft
-  [radar craft]
-  (swap! 
-    radar 
-    (fn [radar craft] 
-      (assoc-in radar [:aircraft (:cid craft)] craft))
-    craft))
-
-(defn destroy-radar [radar]
-  (applet-close (:sketch @radar)))
-
-(defn create-radar [raw-profile]
+(defn create-radar [raw-profile network]
+  {:pre [(satisfies? XRadarNetwork network)]}
   (let [profile (fill-profile raw-profile)
         state (atom {:profile profile
+                     :network network
                      :aircraft {}})]
     (q/defsketch xradar
       :title "xRadar"
@@ -179,7 +171,7 @@
     state))
 
 (defn- aircraft [cid x y]
-  {:cid cid :x x :y y :callsign "ACA263"
+  {:cid cid :x x :y y :callsign (str "ACA26" cid)
    :type "B737/L" 
    :depart "KLGA" :arrive "KBOS" :alternate ""
    :cruise "FL310" :route "MERIT ROBUC3" 
@@ -187,7 +179,10 @@
    :remarks "/v/" :rules :ifr})
 
 (defn- testing []
-  (def radar (create-radar {:debug true}))
+  (def radar (create-radar {:debug true}
+                           (reify XRadarNetwork
+                             (update-flightplan [this aircraft]
+                               (def last-action {:update-fp aircraft})))))
   (update-aircraft radar (aircraft 2 50 50))
   (update-aircraft radar (aircraft 3 150 100))
   (update-aircraft radar (aircraft 4 250 100))

@@ -3,7 +3,10 @@
   xradar.flight-plan
   (:require [seesaw
              [core :as s]
-             [mig :refer [mig-panel]]]))
+             [mig :refer [mig-panel]]]
+            [xradar
+             [network :refer [update-flightplan]]
+             [radar-util :refer [update-aircraft]]]))
 
 (defmacro field
   [label field-key & opts]
@@ -28,11 +31,43 @@
   (-> text (.setFocusTraversalKeys java.awt.KeyboardFocusManager/BACKWARD_TRAVERSAL_KEYS nil))
   text)
 
+(defn amend-plan
+  [state cid new-craft-data]
+  ;; (def amending ["yup" state])
+  (let [network (:network @state)
+        new-craft (assoc new-craft-data :cid cid)]
+    (update-aircraft state new-craft)
+    (update-flightplan network new-craft)))
+
+(defn amend-plan-handler
+  [state cid e]
+  (let [frame (s/to-frame e)]
+    (amend-plan state cid (s/value frame))))
+
 (def close-action 
   (s/action 
     :name "Close"
     :handler (fn [e] (.dispose (s/to-frame e)))
     :key "menu W"))
+
+(defn save-action
+  [state cid]
+  (s/action 
+    :name "Amend"
+    :handler 
+    (fn [e] 
+      (amend-plan-handler state cid e))))
+
+(defn save-and-close-action
+  [state cid]
+  (s/action 
+    :name "Amend and close"
+    :handler 
+    (fn [e] 
+      (def saving-and-closing "yes")
+      (amend-plan-handler state cid e)
+      (.dispose (s/to-frame e)))
+    :key "menu S"))
 
 (defn open-flight-plan
   "Open the flightplan for the given CID for editing"
@@ -44,7 +79,11 @@
           :title (str "Flight Plan - " (:callsign craft))
           :menubar
           (s/menubar 
-            :items [(s/menu :text "File" :items [close-action])])
+            :items [(s/menu :text "File" 
+                            :items [close-action 
+                                    :separator
+                                    (save-action state cid)
+                                    (save-and-close-action state cid)])])
           :on-close :dispose
           :resizable? false
           :content
@@ -56,7 +95,9 @@
               (field "A/C Type:" :type)
               [["Flight Rules:" "right"]
                [(s/text :text (str (:rules craft))) "grow"]]
-              [[(s/button :text "Amend Plan") "grow"]]
+              [[(s/button :text "Amend Plan"
+                          :listen [:action #(amend-plan-handler state cid %)])
+                "grow"]]
               ;
               (field "Depart:" :depart)
               (field "Arrive:" :arrive)
