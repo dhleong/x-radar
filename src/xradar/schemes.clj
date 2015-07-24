@@ -7,4 +7,6 @@
    :aircraft 
    {:untracked 0xff00EE00
     :tracked 0xff00FF00
-    :selected 0xffFFFFFF}})
+    :selected 0xffFFFFFF}
+   :input
+   {:text 0xffFFFFFF}})

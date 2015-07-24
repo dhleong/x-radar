@@ -79,19 +79,21 @@
         selected (-> radar :selected)
         aircraft (-> radar :aircraft)]
     (q/background (:background scheme))
+    (q/text-align :left)
     (if-let [selected-craft (get aircraft selected nil)]
       (q/text (str selected-craft) 10 (- (q/height) 30)))
-    (doseq [[cid craft] aircraft]
-      (let [updated-craft
-            (if (= selected (:cid craft))
-              (assoc craft :state :selected)
-              craft)]
-        (m/draw-aircraft mode scheme updated-craft)))
+    (let [radar-state (assoc radar :mode (:mode input))]
+      (doseq [[cid craft] aircraft]
+        (let [updated-craft
+              (if (= selected (:cid craft))
+                (assoc craft :state :selected)
+                craft)]
+          (m/draw-aircraft mode radar-state scheme updated-craft))))
     (case mode
       ;; insert mode; draw the input buffer
       :insert
       (do
-        (q/stroke 0xFFF) ;; TODO color scheme
+        (q/fill-int (-> scheme :input :text))
         (q/text (str (:insert-buffer input))))
       ;; default; do nothing
       nil)
@@ -151,4 +153,5 @@
 
 (defn- testing []
   (def radar (create-radar {}))
-  (update-aircraft radar (aircraft 2 50 50)))
+  (update-aircraft radar (aircraft 2 50 50))
+  (update-aircraft radar (aircraft 3 150 100)))

@@ -13,6 +13,21 @@
         key-2 second-keys]
     [key-1 key-2]))
 
+(defn bindings-to-aircraft
+  "Given the result of aircraft-to-bindings,
+  return a map of cid->binding"
+  [bindings]
+  (->> bindings
+       (mapcat
+         (fn [[key-1 choices]]
+           (map
+             (fn [[key-2 parts]]
+               (let [form (-> parts vals last)
+                     cid (last form)]
+                 {cid (str (name key-1) (name key-2))}))
+             choices)))
+       (apply merge)))
+
 (defn aircraft-to-bindings
   "Generate a binding map for selecting
   the given aircraft"

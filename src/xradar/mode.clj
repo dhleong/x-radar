@@ -4,5 +4,5 @@
 
 (defprotocol RadarMode
   (draw-aircraft
-    [this scheme aircraft] 
+    [this radar scheme aircraft] 
     "Draw the aircraft using the given colorscheme"))

@@ -5,7 +5,8 @@
            state is the radar's state atom. The return
            value MUST be the new machine state, if any."}
   xradar.commands
-  (:require [xradar.aircraft-selection :refer [aircraft-to-bindings]]))
+  (:require [xradar.aircraft-selection :refer [aircraft-to-bindings
+                                               bindings-to-aircraft]]))
 
 (defn switch-mode
   [machine state new-mode]
@@ -77,10 +78,15 @@
   [machine state]
   (let [craft (:aircraft @state)
         aircraft-selections (aircraft-to-bindings craft 'select-aircraft)]
+    (swap! state #(assoc %
+                         :craft-bindings 
+                         (bindings-to-aircraft aircraft-selections)))
     (assoc (to-mode :select-aircraft)
            :current-bindings aircraft-selections)))
 
 (defn select-aircraft
   [machine state cid]
-  (swap! state #(assoc % :selected cid))
+  (swap! state #(assoc % 
+                       :selected cid 
+                       :craft-bindings {}))
   (to-mode :normal))
