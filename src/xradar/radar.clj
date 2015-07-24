@@ -155,4 +155,9 @@
 (defn- testing []
   (def radar (create-radar {}))
   (update-aircraft radar (aircraft 2 50 50))
-  (update-aircraft radar (aircraft 3 150 100)))
+  (update-aircraft radar (aircraft 3 150 100))
+  (update-aircraft radar (aircraft 4 250 100))
+  (update-aircraft radar (aircraft 5 150 200))
+  (update-aircraft radar (aircraft 6 50 300))
+  (update-aircraft radar (aircraft 7 100 200))
+  (update-aircraft radar (aircraft 8 300 300)))

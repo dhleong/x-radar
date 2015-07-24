@@ -9,12 +9,11 @@
 
 (defmulti my-aircraft (fn [scheme craft] (:state craft :untracked)))
 (defmethod my-aircraft :default [scheme craft]
+  (q/ellipse-mode :center)
   (q/ellipse (:x craft) (:y craft) craft-width craft-height))
 
-(deftype XRadarMode []
-  RadarMode
-  (draw-aircraft [this radar scheme craft]
-    (let [state (:state craft :untracked)
+(defn- do-draw-aircraft [radar scheme craft]
+  (let [state (:state craft :untracked)
           craft-color (get-in scheme 
                               [:aircraft state]
                               (-> scheme :aircraft :untracked))
@@ -30,7 +29,14 @@
       (q/fill-int craft-color)
       (when mapping
         (q/fill-int craft-color)
-        (q/text-align :right)
-        (q/text (str mapping) (:x craft) (:y craft))))))
+        (q/text-size 14)
+        (q/text-align :right :center)
+        (q/text (str mapping) (- (:x craft) 10) (:y craft)))))
+
+(deftype XRadarMode []
+  RadarMode
+  (draw-aircraft [this radar scheme craft]
+    ;; split out so it's easier to update in repl
+    (do-draw-aircraft radar scheme craft)))
 
 (defn create-mode [] (XRadarMode.))
