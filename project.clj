@@ -8,4 +8,5 @@
                  [quil "2.2.6"]]
   :main ^:skip-aot xradar.core
   :target-path "target/%s"
+  :jvm-opts ["-Xdock:name=xRadar"] 
   :profiles {:uberjar {:aot :all}})
