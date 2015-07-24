@@ -37,7 +37,9 @@
 (defn open-flight-plan
   "Open the flightplan for the given CID for editing"
   [state cid]
-  (let [craft (get-in @state [:aircraft cid])]
+  (let [craft (get-in @state [:aircraft cid])
+        scratch-field (field "Scratchpad:" :scratch)
+        scratchpad (-> scratch-field last first)]
     (-> (s/frame 
           :title (str "Flight Plan - " (:callsign craft))
           :menubar
@@ -62,7 +64,7 @@
               [[(s/button :text "Refresh Plan") "grow"]]
               ;
               (field "Cruse:" :cruise)
-              (field "Scratchpad:" :scratch)
+              scratch-field
               (field "Squawk" :squawk)
               [[(s/button :text "Assign Squawk") "grow"]]
               ;
@@ -80,4 +82,5 @@
                      "grow,span 6"))))
         (s/move! :to [100 100])
         s/pack!
-        s/show!)))
+        s/show!)
+    (s/request-focus! scratchpad)))
