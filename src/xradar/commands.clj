@@ -5,8 +5,9 @@
            state is the radar's state atom. The return
            value MUST be the new machine state, if any."}
   xradar.commands
-  (:require [xradar.aircraft-selection :refer [aircraft-to-bindings
-                                               bindings-to-aircraft]]))
+  (:require [xradar
+             [aircraft-selection :refer [aircraft-to-bindings bindings-to-aircraft]]
+             [flight-plan :refer [open-flight-plan]]]))
 
 (defn switch-mode
   [machine state new-mode]
@@ -58,6 +59,10 @@
   (assoc (stop-insert machine state)
          :last-echo values))
 
+(defmacro doecho
+  [& args]
+  `(echo ~'machine ~'state ~@args))
+
 (defn eval-command
   [machine state raw]
   (let [raw-symbol? (or (symbol? raw) (string? raw))
@@ -70,9 +75,13 @@
       (and (not raw-symbol?) (seq raw))
       (if-let [list-cmd (ns-resolve 'xradar.commands (first raw))]
         (apply list-cmd machine state (rest raw))
-        (echo machine state (str "No such command:" (first raw))))
+        (doecho (str "No such command:" (first raw))))
       ;; no such thing :(
-      :else (echo machine state (str "No such command:" raw)))))
+      :else (doecho (str "No such command:" raw)))))
+
+;;
+;; Aircraft selection
+;;
 
 (defn start-select-aircraft
   [machine state]
@@ -90,3 +99,15 @@
                        :selected cid 
                        :craft-bindings {}))
   (to-mode :normal))
+
+;;
+;; Window toggling
+;;
+
+(defn toggle-flight-plan
+  [machine state]
+  (if-let [cid (:selected @state)]
+    (do
+      (open-flight-plan state cid)
+      (to-mode :normal))
+    (doecho "You must select an aircraft to edit its flight plan")))

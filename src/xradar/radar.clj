@@ -170,7 +170,7 @@
       :setup-params [state]
       :draw draw
       :size (:size profile)
-      :features [:resizeable]
+      :features [:resizable]
       :key-pressed on-key-press
       :key-released on-key-release
       :middleware [qm/pause-on-error qm/fun-mode setup-params])
@@ -179,7 +179,12 @@
     state))
 
 (defn- aircraft [cid x y]
-  {:cid cid :x x :y y :callsign "ACA263"})
+  {:cid cid :x x :y y :callsign "ACA263"
+   :type "B737/L" 
+   :depart "KLGA" :arrive "KBOS" :alternate ""
+   :cruise "FL310" :route "MERIT ROBUC3" 
+   :scratch "" :squawk ""
+   :remarks "/v/" :rules :ifr})
 
 (defn- testing []
   (def radar (create-radar {:debug true}))
@@ -189,4 +194,5 @@
   (update-aircraft radar (aircraft 5 150 200))
   (update-aircraft radar (aircraft 6 50 300))
   (update-aircraft radar (aircraft 7 100 200))
-  (update-aircraft radar (aircraft 8 300 300)))
+  (update-aircraft radar (aircraft 8 300 300))
+  "Opened!")
