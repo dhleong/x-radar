@@ -9,4 +9,5 @@
     :tracked 0xff00FF00
     :selected 0xffFFFFFF}
    :input
-   {:text 0xffFFFFFF}})
+   {:text 0xffFFFFFF
+    :box 0xffEEEEEE}})

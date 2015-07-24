@@ -20,6 +20,9 @@
 (def default-location [20 20])
 (def fps 10)
 
+(def bar-text-size 14)
+(def bar-padding 10)
+
 ;;
 ;; Util
 ;;
@@ -74,34 +77,50 @@
 (defn draw [state]
   (let [radar @(:radar-state state)
         input @(:input state)
+        input-mode (:mode input)
         scheme (-> radar :profile :scheme)
         mode (-> radar :profile :mode)
         selected (-> radar :selected)
         aircraft (-> radar :aircraft)]
     (q/background (:background scheme))
     (q/text-align :left)
-    (if-let [selected-craft (get aircraft selected nil)]
-      (q/text (str selected-craft) 10 (- (q/height) 30)))
-    (let [radar-state (assoc radar :mode (:mode input))]
+    (when-let [selected-craft (get aircraft selected nil)]
+      (q/text-size bar-text-size)
+      (q/text (str (:callsign selected-craft)) 
+              bar-padding 
+              (- (q/height) bar-padding)))
+    (let [radar-state (assoc radar :mode input-mode)]
       (doseq [[cid craft] aircraft]
         (let [updated-craft
               (if (= selected (:cid craft))
                 (assoc craft :state :selected)
                 craft)]
           (m/draw-aircraft mode radar-state scheme updated-craft))))
-    (case mode
+    (case input-mode
       ;; insert mode; draw the input buffer
       :insert
-      (do
+      (let [l (+ bar-padding (q/text-width "XXX1234") bar-padding)
+            b (- (q/height) bar-padding)]
+        ;; draw the text
+        (q/text-size bar-text-size)
         (q/fill-int (-> scheme :input :text))
-        (q/text (str (:insert-buffer input))))
+        (q/text (apply str (:insert-buffer input)) l b)
+        ;; draw the box
+        (q/stroke-int (-> scheme :input :box))
+        (q/rect-mode :corners)
+        (q/no-fill)
+        (q/rect (- l (/ bar-padding 2)) 
+                (- (q/height) bar-text-size bar-padding) 
+                (- (q/width) bar-padding)
+                (+ b (q/text-descent))))
       ;; default; do nothing
       nil)
     ;; debugging
-    (q/fill-int 0xffFFFFFF)
-    (q/text-align :left)
-    (q/text (describe-input (-> state :input)) 10 (- (q/height) 10)))
-  ;; ensure the state is returned
+    (when (-> radar :profile :debug)
+      (q/fill-int 0xffFFFFFF)
+      (q/text-align :left)
+      (q/text (describe-input (-> state :input)) 10 10)))
+  ;; ensure the state is returned (we don't change anything)
   state)
 
 (defn on-key-press [state event]
@@ -153,7 +172,7 @@
   {:cid cid :x x :y y :callsign "ACA263"})
 
 (defn- testing []
-  (def radar (create-radar {}))
+  (def radar (create-radar {:debug true}))
   (update-aircraft radar (aircraft 2 50 50))
   (update-aircraft radar (aircraft 3 150 100))
   (update-aircraft radar (aircraft 4 250 100))

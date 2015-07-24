@@ -48,8 +48,8 @@
       ;; default; append
       (assoc machine
            :insert-buffer
-           (conj (:insert-buffer machine)
-                 (:raw-key last-press))))))
+           (concat (:insert-buffer machine)
+                   [(:raw-key last-press)])))))
 
 (defn echo
   [machine state & values]
