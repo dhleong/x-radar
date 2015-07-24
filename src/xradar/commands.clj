@@ -67,7 +67,7 @@
       ;; valid command? execute
       command (command machine state)
       ;; form? insert machine/state and execute
-      (seq raw)
+      (and (not raw-symbol?) (seq raw))
       (if-let [list-cmd (ns-resolve 'xradar.commands (first raw))]
         (apply list-cmd machine state (rest raw))
         (echo machine state (str "No such command:" (first raw))))

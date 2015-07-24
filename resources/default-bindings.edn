@@ -7,3 +7,4 @@
 ; planned; demos multi-key maps
 #map/normal/od toggle-departures
 #map/normal/of toggle-flight-strips
+#map/normal/op toggle-flight-plan

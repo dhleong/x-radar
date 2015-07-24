@@ -8,6 +8,7 @@
    {:untracked 0xff00EE00
     :tracked 0xff00FF00
     :selected 0xffFFFFFF}
+   :echo 0xffFFFFFF
    :input
    {:text 0xffFFFFFF
     :box 0xffEEEEEE}})

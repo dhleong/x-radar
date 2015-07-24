@@ -117,12 +117,14 @@
     :command (add-modifier machine :cmd)
     :control (add-modifier machine :ctrl)
     ;; default
-    (let [modded-event (translate-event machine event)
-          current-bindings (-> machine :current-bindings)
+  ;; NB: last echo is cleared on any keypress!
+    (let [new-machine (assoc machine :last-echo nil)
+          modded-event (translate-event new-machine event)
+          current-bindings (-> new-machine :current-bindings)
           the-key (:key modded-event)]
       (if-let [branch (get current-bindings the-key)]
-        (follow-key-branch machine state branch)
-        (pressed-in-mode (assoc machine :last-press modded-event)
+        (follow-key-branch new-machine state branch)
+        (pressed-in-mode (assoc new-machine :last-press modded-event)
                          state)))))
 
 (defn- process-release

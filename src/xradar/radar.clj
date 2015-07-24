@@ -1,7 +1,8 @@
 (ns ^{:author "Daniel Leong"
       :doc "Radar UI module"}
   xradar.radar
-  (:require [quil
+  (:require [clojure.string :refer [join]]
+            [quil
              [core :as q]
              [applet :refer [applet-close]]
              [middleware :as qm]]
@@ -22,6 +23,7 @@
 
 (def bar-text-size 14)
 (def bar-padding 10)
+(def echo-text-size 13.5)
 
 ;;
 ;; Util
@@ -115,10 +117,18 @@
                 (+ b (q/text-descent))))
       ;; default; do nothing
       nil)
+    (when-let [echo (:last-echo input)]
+      (q/text-size echo-text-size)
+      (q/fill-int (-> scheme :echo))
+      ;; (q/text nil)
+      (q/text (join " " echo) 
+              bar-padding
+              (- (q/height) bar-padding bar-text-size bar-padding)))
     ;; debugging
     (when (-> radar :profile :debug)
       (q/fill-int 0xffFFFFFF)
       (q/text-align :left)
+      (q/text-size 11)
       (q/text (describe-input (-> state :input)) 10 10)))
   ;; ensure the state is returned (we don't change anything)
   state)
@@ -163,7 +173,7 @@
       :features [:resizeable]
       :key-pressed on-key-press
       :key-released on-key-release
-      :middleware [qm/fun-mode qm/pause-on-error setup-params])
+      :middleware [qm/pause-on-error qm/fun-mode setup-params])
     (position-window xradar (:win-position profile))
     (swap! state #(assoc % :sketch xradar))
     state))
