@@ -99,6 +99,7 @@
       nil)
     ;; debugging
     (q/fill-int 0xffFFFFFF)
+    (q/text-align :left)
     (q/text (describe-input (-> state :input)) 10 (- (q/height) 10)))
   ;; ensure the state is returned
   state)
