@@ -57,5 +57,6 @@
 
 (defn read-default-bindings
   []
-  (read-bindings 
-    (io/reader (io/resource default-bindings-filename))))
+  (with-open [reader (io/reader 
+                       (io/resource default-bindings-filename))]
+    (read-bindings reader)))
