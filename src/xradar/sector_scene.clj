@@ -5,7 +5,9 @@
             [clojure.java.io :as io]
             [quil
              [core :as q]]
-            [xradar.scene :refer :all]))
+            [xradar
+             [scene :refer :all]
+             [util :refer [in-bounds]]]))
 
 ;;
 ;; Constants
@@ -218,16 +220,23 @@
 
 (defn- draw-line
   [line]
-  (q/stroke-int (:color line))
-  (q/stroke-weight 1)
-  (q/line (:x (:start line)) (:y (:start line))
-          (:x (:end line)) (:y (:end line))))
+  (let [x1 (:x (:start line))
+        y1 (:y (:start line))
+        x2 (:x (:end line))
+        y2 (:y (:end line))]
+    (when (and (in-bounds x1 y1) (in-bounds x2 y2))
+      (q/stroke-int (:color line))
+      (q/stroke-weight 1)
+      (q/line x1 y1 x2 y2))))
 
 (defn- draw-label
   [label]
-  (q/fill-int (:color label))
-  (q/text-size 4)
-  (q/text (:label label) (:x (:coord label)) (:y (:coord label))))
+  (let [x (:x (:coord label))
+        y (:y (:coord label))]
+    (when (in-bounds x y)
+      (q/fill-int (:color label))
+      (q/text-size 4)
+      (q/text (:label label) x y))))
 
 (defn- draw-each
   [data mode artist]
