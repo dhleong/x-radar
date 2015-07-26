@@ -8,4 +8,12 @@
   (draw-scene
     [this profile]
     "Draw the elements of the scene as specified
-    by the `:draw` list in the `:profile`"))
+    by the `:draw` list in the `:profile`")
+  (get-center
+    [this]
+    "Get the center coordinate as {:x, :y}
+    for this scenery.")
+  (loaded?
+    [this]
+    "Some scenery implementations may load asynchronously;
+    use this to check if it's ready"))

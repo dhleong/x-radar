@@ -5,7 +5,7 @@
             [clojure.java.io :as io]
             [quil
              [core :as q]]
-            [xradar.scene :refer [XScene draw-scene]]))
+            [xradar.scene :refer [XScene draw-scene get-center loaded?]]))
 
 ;;
 ;; Constants
@@ -74,8 +74,8 @@
           0 [:name line]
           1 [:default-callsign line]
           2 [:default-airport line]
-          3 [:center-lat line]
-          4 [:center-lon line]
+          3 [:center-lat (parse-coord line)]
+          4 [:center-lon (parse-coord line)]
           5 [:nm-per-lat (Integer/parseInt line)]
           6 [:nm-per-lon (Integer/parseInt line)]
           7 [:magnet-var (Double/parseDouble line)]
@@ -128,9 +128,10 @@
             ;; ZNY prefixes each group with a line
             ;;  referring to the airport's name....
             nil))]
-    (assoc data 
-           :geo 
-           (conj (get data :geo []) info))))
+    (when (not (nil? info))
+      (assoc data 
+             :geo 
+             (conj (get data :geo []) info)))))
 
 (defn- parse-label-line
   "[LABELS]"
@@ -206,14 +207,54 @@
     (load-from-reader reader)))
 
 ;;
+;; Art utils
+;;
+
+(defn- draw-line
+  [line]
+  (q/stroke-int (:color line))
+  (q/line (:x (:start line)) (:y (:start line))
+          (:x (:end line)) (:y (:end line))))
+
+(defn- draw-label
+  [label]
+  (q/fill-int (:color label))
+  (q/text-size 0.1)
+  (q/text (:label label) (:x (:coord label)) (:y (:coord label))))
+
+(defn- draw-each
+  [data mode artist]
+  (doseq [element (get data mode)]
+    (try
+      (artist element)
+      (catch Exception e
+        (throw (RuntimeException. 
+                 (str "Error drawing " element " in " mode)
+                 e))))))
+
+;;
 ;; Public interface
 ;;
 
-(deftype SectorScene [data]
+(deftype SectorScene [data-atom]
   XScene
   (draw-scene [this profile]
-    ;; FIXME draw the scene
-    nil))
-
+    (if-let [data @data-atom]
+      (doseq [mode (-> profile :draw)]
+        (case mode
+          :geo (draw-each data :geo draw-line)
+          :labels (draw-each data :labels draw-label)
+          ;; else, unsupported type
+          nil))))
+  (get-center [this]
+    (if-let [info (-> @data-atom :info)]
+      {:x (-> info :center-lon)
+       :y (-> info :center-lat)}))
+  (loaded? [this]
+    (not (empty? @data-atom))))
+  
 (defn load-sector [input]
-  (->SectorScene (load-sector-data input)))
+  (let [data-atom (atom {})
+        scene (->SectorScene data-atom)]
+    (future (swap! data-atom (fn [_] (load-sector-data input))))
+    scene))

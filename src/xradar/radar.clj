@@ -11,7 +11,10 @@
              [network :refer [XRadarNetwork]]
              [radar-util :refer [update-aircraft]]
              [schemes :as schemes]
-             [mode :as m :refer [RadarMode]]]
+             [scene :refer [XScene get-center loaded? draw-scene]]
+             [sector-scene :refer [load-sector]]
+             [mode :as m :refer [RadarMode]]
+             [util :refer [deep-merge]]]
             [xradar.modes.xradar-mode :refer [create-mode]]))
 
 ;;
@@ -33,12 +36,13 @@
 (defn- fill-profile
   "Ensure some defaults exist in the profile"
   [profile]
-  (merge {:mode (create-mode)
-          :scheme schemes/default
-          :size default-size
-          :timeout-len 1000 ;; time before a key sequence is dropped
-          :win-position default-location}
-         profile))
+  (deep-merge {:mode (create-mode)
+               :scheme schemes/default
+               :draw [:geo :labels]
+               :size default-size
+               :timeout-len 1000 ;; time before a key sequence is dropped
+               :win-position default-location}
+              profile))
 
 (defn- fix-esc
   [event]
@@ -81,11 +85,19 @@
   (let [radar @(:radar-state state)
         input @(:input state)
         input-mode (:mode input)
-        scheme (-> radar :profile :scheme)
-        mode (-> radar :profile :mode)
+        profile (-> radar :profile)
+        scheme (-> profile :scheme)
+        scene (-> radar :scene)
+        mode (-> profile :mode)
         selected (-> radar :selected)
-        aircraft (-> radar :aircraft)]
+        aircraft (-> radar :aircraft)
+        scene-loaded (loaded? scene)
+        just-loaded (and (not (:loaded scene)) scene-loaded)]
     (q/background (:background scheme))
+    (if scene-loaded
+      ;; FIXME this doesn't work well, and chews through processor
+      (draw-scene scene profile)
+      (q/text "Loading..." 20 20))
     (q/text-align :left)
     (when-let [selected-craft (get aircraft selected nil)]
       (q/text-size bar-text-size)
@@ -130,9 +142,12 @@
       (q/fill-int 0xffFFFFFF)
       (q/text-align :left)
       (q/text-size 11)
-      (q/text (describe-input (-> state :input)) 10 10)))
-  ;; ensure the state is returned (we don't change anything)
-  state)
+      (q/text (describe-input (-> state :input)) 10 10))
+    ;; ensure the state is returned
+    (if just-loaded
+      ;; update our state
+      (assoc state :loaded true)
+      state)))
 
 (defn on-key-press [state event]
   (process-input-press (:input state) (fix-esc event) (:radar-state state))
@@ -150,11 +165,13 @@
 ;; Public interface
 ;;
 
-(defn create-radar [raw-profile network]
-  {:pre [(satisfies? XRadarNetwork network)]}
+(defn create-radar [raw-profile scene network]
+  {:pre [(satisfies? XRadarNetwork network)
+         (satisfies? XScene scene)]}
   (let [profile (fill-profile raw-profile)
         state (atom {:profile profile
                      :network network
+                     :scene scene
                      :aircraft {}})]
     (q/defsketch xradar
       :title "xRadar"
@@ -180,6 +197,7 @@
 
 (defn- testing []
   (def radar (create-radar {:debug true}
+                           (load-sector "/Users/dhleong/VRC/Support/ZNY.sct2")
                            (reify XRadarNetwork
                              (update-flightplan [this aircraft]
                                (def last-action {:update-fp aircraft})))))
