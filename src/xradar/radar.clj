@@ -39,6 +39,7 @@
   (deep-merge {:mode (create-mode)
                :scheme schemes/default
                :draw [:geo :labels]
+               :smoothing 4
                :size default-size
                :timeout-len 1000 ;; time before a key sequence is dropped
                :win-position default-location}
@@ -75,7 +76,7 @@
 ;;
 
 (defn setup [state-atom]
-  ;; (q/smooth)
+  (q/smooth (get-in @state-atom [:profile :smoothing] 4))
   (q/frame-rate fps)
   (q/background (get-in @state-atom [:profile :scheme :background]))
   {:radar-state state-atom
@@ -94,8 +95,18 @@
         scene-loaded (loaded? scene)
         just-loaded (and (not (:loaded scene)) scene-loaded)]
     (q/background (:background scheme))
+    (when scene-loaded
+      (let [{:keys [x y]} (get-center scene)]
+        ;; TODO reset camera to draw UI
+        (q/camera)
+        (q/fill-int 0xffFFFFFF)
+        (q/text-size 12)
+        (q/text "hi" 20 20)
+        (q/camera x y 220 
+                  x y 0
+                  0 1 0)))
     (if scene-loaded
-      ;; FIXME this doesn't work well, and chews through processor
+      ;; TODO is there any way to reduce CPU load?
       (draw-scene scene profile)
       (q/text "Loading..." 20 20))
     (q/text-align :left)
@@ -178,6 +189,7 @@
       :setup setup
       :setup-params [state]
       :draw draw
+      :renderer :opengl
       :size (:size profile)
       :features [:resizable]
       :key-pressed on-key-press

@@ -11,6 +11,8 @@
 ;; Constants
 ;;
 (def re-spaces #"\s+")
+(def latlon-scale-plus 10000)
+(def latlon-scale-minus -10000)
 
 ;;
 ;; Util methods
@@ -39,10 +41,14 @@
   ([coord]
    (let [sign
          (case (first coord)
-           \N 1
-           \E 1
-           \S -1
-           \W -1)
+           ;; NB N and S are swapped from
+           ;;  what you might expect since
+           ;;  the origin is at the top instead of the bottom.
+           ;;  We scale it up quite a bit so it can be drawn nicely
+           \N latlon-scale-minus
+           \E latlon-scale-plus
+           \S latlon-scale-plus
+           \W latlon-scale-minus)
          parts (-> coord
                    (.substring 1)
                    (split #"\.")
@@ -213,13 +219,14 @@
 (defn- draw-line
   [line]
   (q/stroke-int (:color line))
+  (q/stroke-weight 1)
   (q/line (:x (:start line)) (:y (:start line))
           (:x (:end line)) (:y (:end line))))
 
 (defn- draw-label
   [label]
   (q/fill-int (:color label))
-  (q/text-size 0.1)
+  (q/text-size 4)
   (q/text (:label label) (:x (:coord label)) (:y (:coord label))))
 
 (defn- draw-each
