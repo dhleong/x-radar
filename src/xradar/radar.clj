@@ -24,7 +24,7 @@
 
 (def default-size [800 800])
 (def default-location [20 20])
-(def fps 10)
+(def fps 7)
 (def renderer :opengl)
 
 (def bar-text-size 14)
@@ -180,6 +180,7 @@
       state)))
 
 (defn on-key-press [state event]
+  (q/redraw)
   (process-input-press (:input state) (fix-esc event) (:radar-state state))
   (when (= 27 (q/key-code)) ; 27 is escape key.
     ; Preventing esc from closing the sketch by setting current key to 0.
