@@ -13,6 +13,9 @@
     [this]
     "Get the center coordinate as {:x, :y}
     for this scenery.")
+  (get-lon-scale
+    [this]
+    "Get the longitude scaling")
   (loaded?
     [this]
     "Some scenery implementations may load asynchronously;

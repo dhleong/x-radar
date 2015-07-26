@@ -5,7 +5,7 @@
             [clojure.java.io :as io]
             [quil
              [core :as q]]
-            [xradar.scene :refer [XScene draw-scene get-center loaded?]]))
+            [xradar.scene :refer :all]))
 
 ;;
 ;; Constants
@@ -257,6 +257,10 @@
     (if-let [info (-> @data-atom :info)]
       {:x (-> info :center-lon)
        :y (-> info :center-lat)}))
+  (get-lon-scale [this]
+    (if-let [info (-> @data-atom :info)]
+      (/ (:nm-per-lon info) (:nm-per-lat info))
+      1))
   (loaded? [this]
     (not (empty? @data-atom))))
   

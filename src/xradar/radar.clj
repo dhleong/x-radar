@@ -11,7 +11,8 @@
              [network :refer [XRadarNetwork]]
              [radar-util :refer [update-aircraft]]
              [schemes :as schemes]
-             [scene :refer [XScene get-center loaded? draw-scene]]
+             [scene :refer [XScene get-center get-lon-scale
+                            loaded? draw-scene]]
              [sector-scene :refer [load-sector]]
              [mode :as m :refer [RadarMode]]
              [util :refer [deep-merge]]]
@@ -24,6 +25,7 @@
 (def default-size [800 800])
 (def default-location [20 20])
 (def fps 10)
+(def renderer :opengl)
 
 (def bar-text-size 14)
 (def bar-padding 10)
@@ -96,25 +98,32 @@
         just-loaded (and (not (:loaded scene)) scene-loaded)]
     (q/background (:background scheme))
     (when scene-loaded
-      (let [{:keys [x y]} (get-center scene)]
-        ;; TODO reset camera to draw UI
-        (q/camera)
-        (q/fill-int 0xffFFFFFF)
-        (q/text-size 12)
-        (q/text "hi" 20 20)
-        (q/camera x y 220 
+      (let [{:keys [x y]} (get-center scene)
+            scale 220]
+        (q/begin-camera)
+        ;; TODO navigate; be more sane?
+        (q/camera x y scale
                   x y 0
-                  0 1 0)))
-    (if scene-loaded
+                  0 1 0)
+        #_(q/push-matrix)
+        (let [px x
+              py y
+              sx (get-lon-scale scene)
+              sy 1]
+          ;; scale, centered on a point.
+          ;; the built-in scale always goes
+          ;;  from the origin
+          (q/apply-matrix
+            sx 0 0 (- px (* sx px))
+            0 sy 0 (- py (* sy py))
+            0 0 1 0
+            0 0 0 1))
+        (q/end-camera))
       ;; TODO is there any way to reduce CPU load?
       (draw-scene scene profile)
+      #_(q/pop-matrix))
+    (if (not scene-loaded)
       (q/text "Loading..." 20 20))
-    (q/text-align :left)
-    (when-let [selected-craft (get aircraft selected nil)]
-      (q/text-size bar-text-size)
-      (q/text (str (:callsign selected-craft)) 
-              bar-padding 
-              (- (q/height) bar-padding)))
     (let [radar-state (assoc radar :mode input-mode)]
       (doseq [[cid craft] aircraft]
         (let [updated-craft
@@ -122,6 +131,16 @@
                 (assoc craft :state :selected)
                 craft)]
           (m/draw-aircraft mode radar-state scheme updated-craft))))
+    ;; reset camera mode for UI
+    (q/camera)
+    (when-let [selected-craft (get aircraft selected nil)]
+      ;; draw selected aircraft
+      (q/text-align :left)
+      (q/fill-int (-> scheme :input :text))
+      (q/text-size bar-text-size)
+      (q/text (str (:callsign selected-craft)) 
+              bar-padding 
+              (- (q/height) bar-padding)))
     (case input-mode
       ;; insert mode; draw the input buffer
       :insert
@@ -189,7 +208,7 @@
       :setup setup
       :setup-params [state]
       :draw draw
-      :renderer :opengl
+      :renderer renderer
       :size (:size profile)
       :features [:resizable]
       :key-pressed on-key-press
@@ -213,8 +232,9 @@
                            (reify XRadarNetwork
                              (update-flightplan [this aircraft]
                                (def last-action {:update-fp aircraft})))))
-  (update-aircraft radar (aircraft 2 50 50))
-  (update-aircraft radar (aircraft 3 150 100))
+  ;; (update-aircraft radar (aircraft 2 50 50))
+  (update-aircraft radar (aircraft 2 -265941403/360, -146798053/360))
+  (update-aircraft radar (aircraft 3 -265924109/360 -146789321/360))
   (update-aircraft radar (aircraft 4 250 100))
   (update-aircraft radar (aircraft 5 150 200))
   (update-aircraft radar (aircraft 6 50 300))
