@@ -3,8 +3,7 @@
   xradar.util
   (:require [quil.core :as q]
             [clojure.core.matrix :refer [matrix inner-product set-current-implementation]]
-            [xradar.scene :refer [get-center get-lon-scale loaded?]]
-            [xradar.sector-scene :refer :all]))
+            [xradar.scene :refer [get-center get-lon-scale loaded?]]))
 
 (set-current-implementation :vectorz) 
 
@@ -78,7 +77,7 @@
     ;; loaded!
     {:x (* (:x coord) coord-scale (my-get-lon-scale scene))
      :y (* (:y coord) coord-scale)}
-    (if-let [mat (get-matrix scene)]
+    #_(if-let [mat (get-matrix scene)]
       (let [mapped 
             (inner-product
               mat
