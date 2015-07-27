@@ -3,7 +3,8 @@
   xradar.util
   (:require [quil.core :as q]
             [clojure.core.matrix :refer [matrix inner-product set-current-implementation]]
-            [xradar.scene :refer [get-center get-lon-scale loaded?]]))
+            [xradar.scene :refer [get-center get-lon-scale loaded?]]
+            [xradar.sector-scene :refer :all]))
 
 (set-current-implementation :vectorz) 
 
@@ -34,34 +35,56 @@
         (and (<= sx w)
              (<= sy h)))))
 
+;;
+;; Wacky hacks
+;;
+
+(defn- my-get-center
+  [scene-or-data]
+  (if (map? scene-or-data)
+    (-> scene-or-data :info :center)
+    (get-center scene-or-data)))
+
+(defn- my-get-lon-scale
+  [scene-or-data]
+  (if (map? scene-or-data)
+    (if-let [info (:info scene-or-data)]
+      (/ (:nm-per-lon info) (:nm-per-lat info))
+      1)
+    (get-lon-scale scene-or-data)))
+
 (def cached-mat nil)
 (defn- get-matrix
   [scene]
   (if-let [cached cached-mat]
     cached
-    (let [point (get-center scene)
-         px (:x point)
-         py (:y point)
-         sx (* coord-scale (get-lon-scale scene))
-         sy coord-scale ;; just one (scaled)
-         mat (matrix
-               [[sx 0  (- px (* sx px))]
-                [0  sy (- py (* sy py))]
-                [0  0  1]])]
-     #_(swap! (q/state :radar-state) #(assoc % :map-matrix mat))
-     (def cached-mat mat)
-     mat)))
+    (when-let [point (my-get-center scene)]
+      (when-let [sx (* coord-scale (my-get-lon-scale scene))]
+        (let [px (:x point)
+              py (:y point)
+              sy coord-scale ;; just one (scaled)
+              mat (matrix
+                    [[sx 0  (- px (* sx px))]
+                     [0  sy (- py (* sy py))]
+                     [0  0  1]])]
+          (def cached-mat mat)
+          mat)))))
 
 (defn map-coord
   "Used inside drawing functions to map a
   {:x, :y} coord as appropriate"
   [scene coord]
-  (if (loaded? scene)
+  (if (or (map? scene) (loaded? scene))
     ;; loaded!
-    (let [mapped 
-          (inner-product
-            (get-matrix scene)
-            [(:x coord) (:y coord) 1])]
-      {:x (first mapped) :y (second mapped)})
+    {:x (* (:x coord) coord-scale (my-get-lon-scale scene))
+     :y (* (:y coord) coord-scale)}
+    (if-let [mat (get-matrix scene)]
+      (let [mapped 
+            (inner-product
+              mat
+              [(:x coord) (:y coord) 1])]
+        {:x (first mapped) :y (second mapped)})
+      ;; no matrix, probably tests; just pass through
+      coord)
     ;; not loaded; pass through
     coord))

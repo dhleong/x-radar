@@ -13,7 +13,7 @@
              [schemes :as schemes]
              [scene :refer [XScene get-center get-lon-scale
                             get-magnetic-var loaded? draw-scene]]
-             [sector-scene :refer [load-sector]]
+             [sector-scene :refer [load-sector parse-coord]]
              [mode :as m :refer [RadarMode]]
              [util :refer [deep-merge]]]
             [xradar.modes.xradar-mode :refer [create-mode]]))
@@ -25,7 +25,7 @@
 (def default-size [800 800])
 (def default-location [20 20])
 (def fps 7)
-(def renderer :p2d)
+(def renderer :opengl)
 
 (def bar-text-size 14)
 (def bar-padding 10)
@@ -98,8 +98,13 @@
         just-loaded (and (not (:loaded scene)) scene-loaded)]
     (q/background-int (:background scheme))
     (when scene-loaded
+      #_(let [{:keys [x y]} (get-center scene)
+            scale 70]
+        #_(q/text (str x "," y) 20 20)
+        (q/translate (- x) (- y)))
       (let [{:keys [x y]} (get-center scene)
-            scale 120]
+            scale 220]
+        (q/text (str x "," y) 20 20)
         (q/begin-camera)
         ;; TODO navigate; be more sane?
         (q/camera x y scale
@@ -220,8 +225,10 @@
     (swap! state #(assoc % :sketch xradar))
     state))
 
-(defn- aircraft [cid x y]
-  {:cid cid :x x :y y :callsign (str "ACA26" cid)
+(defn- aircraft [cid lat lon]
+  {:cid cid :callsign (str "ACA26" cid)
+   :x (parse-coord lon)
+   :y (parse-coord lat)
    :type "B737/L" 
    :depart "KLGA" :arrive "KBOS" :alternate ""
    :cruise "FL310" :route "MERIT ROBUC3" 
@@ -235,10 +242,10 @@
                              (update-flightplan [this aircraft]
                                (def last-action {:update-fp aircraft})))))
   ;; (update-aircraft radar (aircraft 2 50 50))
-  (update-aircraft radar (aircraft 2 -265941403/360, -146798053/360))
-  (update-aircraft radar (aircraft 3 -265924109/360 -146789321/360))
-  (update-aircraft radar (aircraft 4 250 100))
-  (update-aircraft radar (aircraft 6 50 300))
-  (update-aircraft radar (aircraft 7 100 200))
-  (update-aircraft radar (aircraft 8 300 300))
+  (update-aircraft radar (aircraft 2 "N040.46.18.052" "W073.51.27.664"))
+  (update-aircraft radar (aircraft 3 "N040.46.29.321" "W073.52.04.109"))
+  (update-aircraft radar (aircraft 4 "N040.46.38.053" "W073.52.21.403"))
+  #_(update-aircraft radar (aircraft 6 50 300))
+  #_(update-aircraft radar (aircraft 7 100 200))
+  #_(update-aircraft radar (aircraft 8 300 300))
   "Opened!")

@@ -5,14 +5,14 @@
             [xradar.util :refer [deep-merge map-coord]]))
 
 (defn update-aircraft
-  [radar craft]
+  [radar-atom craft]
   (swap! 
-    radar 
+    radar-atom
     (fn [radar craft] 
       (let [cid (:cid craft)
             mapped-coord (map-coord (-> radar :scene) craft)
             mapped (merge craft mapped-coord)]
-        (deep-merge radar {:aircraft {cid craft}})))
+        (deep-merge radar {:aircraft {cid mapped}})))
     craft))
 
 (defn destroy-radar [radar]

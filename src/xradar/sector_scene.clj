@@ -7,7 +7,7 @@
              [core :as q]]
             [xradar
              [scene :refer :all]
-             [util :refer [coord-scale in-bounds map-coord]]]))
+             [util :refer [coord-scale deep-merge in-bounds map-coord]]]))
 
 ;;
 ;; Constants
@@ -69,13 +69,26 @@
       (-> line (.substring 0 comment-idx))
       line)))
 
+(defn- insert-center
+  [data]
+  ;; when we've ready everything, insert :center
+  (if (-> data :info :sect-scale)
+    ;; generate the :center value
+    (let [lon-scale (/ (-> data :info :nm-per-lon) (-> data :info :nm-per-lat))] 
+      (assoc-in data 
+                [:info :center] 
+                {:y (-> data :info :center-lat (* coord-scale))
+                 :x (-> data :info :center-lon (* coord-scale lon-scale))}))
+    ;; nothing to do
+    data))
+
 ;;
 ;; Sections
 ;;
 
 (defn- parse-info-line
   "[INFO]"
-  [scene data line]
+  [data line]
   (let [info-line (or (:info-line- data) 0)
         [k v] 
         (case info-line
@@ -88,17 +101,19 @@
           6 [:nm-per-lon (Integer/parseInt line)]
           7 [:magnet-var (Double/parseDouble line)]
           8 [:sect-scale line])]
-    (assoc-in (assoc data :info-line- (inc info-line))
-              [:info k] v)))
+    (-> data
+        (assoc :info-line- (inc info-line))
+        (assoc-in [:info k] v)
+        (insert-center))))
 
 (defn- parse-point-line
   "[VOR] or [NDB]"
-  [scene section data line]
+  [section data line]
   (let [parts (split line re-spaces)
         info
         {:name (first parts)
          :freq (second parts)
-         :coord (parse-coord scene
+         :coord (parse-coord data
                              (nth parts 2)
                              (nth parts 3))}]
     (assoc data 
@@ -107,12 +122,12 @@
 
 (defn- parse-airport-line
   "[AIRPORT]"
-  [scene data line]
+  [data line]
   (let [parts (split line re-spaces)
         info
         {:name (first parts)
          :freq (second parts)
-         :coord (parse-coord scene
+         :coord (parse-coord data
                              (nth parts 2)
                              (nth parts 3))
          :airspace (last parts)}]
@@ -122,15 +137,15 @@
 
 (defn- parse-geo-line
   "[GEO]"
-  [scene data line]
+  [data line]
   (let [parts (split line re-spaces)
         color (keyword (last parts))
         info
         (try
-          {:start (parse-coord scene
+          {:start (parse-coord data
                                (nth parts 0)
                                (nth parts 1))
-           :end (parse-coord scene
+           :end (parse-coord data
                              (nth parts 2)
                              (nth parts 3))
            :color (get-in data 
@@ -147,7 +162,7 @@
 
 (defn- parse-label-line
   "[LABELS]"
-  [scene data line]
+  [data line]
   (let [label-end (-> line (.indexOf "\"" 1))
         label (-> line (.substring 1 label-end))
         line-info (-> line
@@ -157,7 +172,7 @@
         color (keyword (last parts))
         info
         {:label label
-         :coord (parse-coord scene
+         :coord (parse-coord data
                              (nth parts 0)
                              (nth parts 1))
          :color (get-in data 
@@ -172,7 +187,7 @@
 ;;
 
 (defn- parse-data-line
-  [scene data line]
+  [data line]
   (cond
     ;; define
     (.startsWith line "#define")
@@ -190,24 +205,24 @@
     ;; data line
     (not (or (empty? line) (.startsWith line ";")))
     (case (:mode- data)
-      :info (parse-info-line scene data line)
-      :vor (parse-point-line scene :vor data line)
-      :ndb (parse-point-line scene :ndb data line)
-      :airport (parse-airport-line scene data line)
-      :geo (parse-geo-line scene data line)
-      :labels (parse-label-line scene data line)
+      :info (parse-info-line data line)
+      :vor (parse-point-line :vor data line)
+      :ndb (parse-point-line :ndb data line)
+      :airport (parse-airport-line data line)
+      :geo (parse-geo-line data line)
+      :labels (parse-label-line data line)
       ;; unsupported section
       nil)))
 
 (defn- load-from-reader
-  [scene reader]
+  [reader]
   (loop [lines (line-seq reader)
          data {}]
     (if (empty? lines)
       ;; return what we have
       (dissoc data :mode- :info-line-)
       ;; parse it!
-      (if-let [updated (parse-data-line scene data (clean-line (first lines)))]
+      (if-let [updated (parse-data-line data (clean-line (first lines)))]
         ; success!
         (recur (rest lines)
                updated)
@@ -215,9 +230,9 @@
         (recur (rest lines)
                data)))))
 
-(defn load-sector-data [scene input]
+(defn load-sector-data [input]
   (with-open [reader (io/reader input)]
-    (load-from-reader scene reader)))
+    (load-from-reader reader)))
 
 ;;
 ;; Art utils
@@ -269,10 +284,7 @@
           nil))))
   (get-center [this]
     (when-let [info (-> @data-atom :info)]
-      ;; NB: get-center is used when mapping,
-      ;;  so we cannot use map-coords in it
-      {:x (* coord-scale (-> info :center-lon))
-       :y (* coord-scale (-> info :center-lat))}))
+      (-> info :center)))
   (get-lon-scale [this]
     (if-let [info (-> @data-atom :info)]
       (/ (:nm-per-lon info) (:nm-per-lat info))
@@ -288,7 +300,7 @@
   (let [data-atom (atom {})
         scene (->SectorScene data-atom)]
     (def last-scene-atom data-atom) ;; NB  for testing purposes
-    (future (swap! data-atom (fn [_] (load-sector-data scene input))))
+    (future (swap! data-atom (fn [_] (load-sector-data input))))
     scene))
 
 ;; for testing...
@@ -296,5 +308,6 @@
   (let [data-atom (atom {})
         scene (->SectorScene data-atom)]
     ;; for testing
-    @(future (swap! data-atom (fn [_] (load-sector-data scene input))))
+    (def last-scene-atom data-atom) ;; NB  for testing purposes
+    @(future (swap! data-atom (fn [_] (load-sector-data input))))
     scene))

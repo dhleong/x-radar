@@ -32,9 +32,7 @@
 
 (defn load-data
   [string]
-  (load-sector-data 
-    (->SectorScene (atom {})) 
-    (StringReader. string)))
+  (load-sector-data (StringReader. string)))
 
 ;; 
 ;; Tests
@@ -58,13 +56,14 @@
                         "S042.00.00.000"
                         "E042.00.00.000"))))
   (testing "parse-coord with scale"
-    (let [scene (load-sector-sync
+    (let [scene (load-sector-data
                   (StringReader. data-info))]
       ;; be lazy and hope we mapped correctly
-      (is (not= {:x 420000 :y 42} 
-             (parse-coord scene 
-                          "S042.00.00.000"
-                          "E042.00.00.000"))))))
+      (println scene)
+      (is (not= {:x 42 :y 42} 
+                (parse-coord scene 
+                             "S042.00.00.000"
+                             "E042.00.00.000"))))))
 
 (deftest load-sector-test
   (testing "#define"
