@@ -3,7 +3,7 @@
   xradar.schemes)
 
 (def default
-  {:background 0xff292831
+  {:background 0xff36363F
    :aircraft 
    {:untracked 0xff00EE00
     :tracked 0xff00FF00

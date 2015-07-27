@@ -13,6 +13,9 @@
     [this]
     "Get the center coordinate as {:x, :y}
     for this scenery.")
+  (get-magnetic-var
+    [this]
+    "Get the magnetic variation")
   (get-lon-scale
     [this]
     "Get the longitude scaling")

@@ -12,7 +12,7 @@
              [radar-util :refer [update-aircraft]]
              [schemes :as schemes]
              [scene :refer [XScene get-center get-lon-scale
-                            loaded? draw-scene]]
+                            get-magnetic-var loaded? draw-scene]]
              [sector-scene :refer [load-sector]]
              [mode :as m :refer [RadarMode]]
              [util :refer [deep-merge]]]
@@ -25,7 +25,7 @@
 (def default-size [800 800])
 (def default-location [20 20])
 (def fps 7)
-(def renderer :opengl)
+(def renderer :p2d)
 
 (def bar-text-size 14)
 (def bar-padding 10)
@@ -80,7 +80,7 @@
 (defn setup [state-atom]
   (q/smooth (get-in @state-atom [:profile :smoothing] 4))
   (q/frame-rate fps)
-  (q/background (get-in @state-atom [:profile :scheme :background]))
+  (q/background-int (get-in @state-atom [:profile :scheme :background]))
   {:radar-state state-atom
    :input (create-input (-> @state-atom :profile))})
 
@@ -96,24 +96,25 @@
         aircraft (-> radar :aircraft)
         scene-loaded (loaded? scene)
         just-loaded (and (not (:loaded scene)) scene-loaded)]
-    (q/background (:background scheme))
+    (q/background-int (:background scheme))
     (when scene-loaded
       (let [{:keys [x y]} (get-center scene)
-            scale 220]
+            scale 120]
         (q/begin-camera)
         ;; TODO navigate; be more sane?
         (q/camera x y scale
                   x y 0
                   0 1 0)
+        #_(q/rotate (/ (q/radians (get-magnetic-var scene)) 100))
         #_(q/push-matrix)
-        (let [px x
+        #_(let [px x
               py y
               sx (get-lon-scale scene)
               sy 1]
           ;; scale, centered on a point.
           ;; the built-in scale always goes
           ;;  from the origin
-          (q/apply-matrix
+          #_(q/apply-matrix
             sx 0 0 (- px (* sx px))
             0 sy 0 (- py (* sy py))
             0 0 1 0
@@ -237,7 +238,6 @@
   (update-aircraft radar (aircraft 2 -265941403/360, -146798053/360))
   (update-aircraft radar (aircraft 3 -265924109/360 -146789321/360))
   (update-aircraft radar (aircraft 4 250 100))
-  (update-aircraft radar (aircraft 5 150 200))
   (update-aircraft radar (aircraft 6 50 300))
   (update-aircraft radar (aircraft 7 100 200))
   (update-aircraft radar (aircraft 8 300 300))
