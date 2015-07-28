@@ -22,8 +22,9 @@
 ;; Constants
 ;;
 
-(def default-size [800 800])
 (def default-location [20 20])
+(def default-size [800 800])
+(def default-zoom 220)
 (def fps 7)
 (def renderer :opengl)
 
@@ -88,42 +89,21 @@
   (let [radar @(:radar-state state)
         input @(:input state)
         input-mode (:mode input)
-        profile (-> radar :profile)
-        scheme (-> profile :scheme)
-        scene (-> radar :scene)
-        mode (-> profile :mode)
-        selected (-> radar :selected)
-        aircraft (-> radar :aircraft)
+        {:keys [profile scene selected
+                aircraft camera zoom]} radar
+        {:keys [scheme mode]} profile
+        this-camera (or camera (get-center scene))
+        this-zoom (or zoom default-zoom)
         scene-loaded (loaded? scene)
-        just-loaded (and (not (:loaded scene)) scene-loaded)]
+        just-loaded (and (not (:loaded state)) scene-loaded)]
     (q/background-int (:background scheme))
     (when scene-loaded
-      #_(let [{:keys [x y]} (get-center scene)
-            scale 70]
-        #_(q/text (str x "," y) 20 20)
-        (q/translate (- x) (- y)))
-      (let [{:keys [x y]} (get-center scene)
-            scale 220]
+      (let [{:keys [x y]} this-camera]
         (q/text (str x "," y) 20 20)
         (q/begin-camera)
-        ;; TODO navigate; be more sane?
-        (q/camera x y scale
+        (q/camera x y this-zoom
                   x y 0
                   0 1 0)
-        #_(q/rotate (/ (q/radians (get-magnetic-var scene)) 100))
-        #_(q/push-matrix)
-        #_(let [px x
-              py y
-              sx (get-lon-scale scene)
-              sy 1]
-          ;; scale, centered on a point.
-          ;; the built-in scale always goes
-          ;;  from the origin
-          #_(q/apply-matrix
-            sx 0 0 (- px (* sx px))
-            0 sy 0 (- py (* sy py))
-            0 0 1 0
-            0 0 0 1))
         (q/end-camera))
       ;; TODO is there any way to reduce CPU load?
       (draw-scene scene profile)
@@ -180,9 +160,22 @@
       (q/text-size 11)
       (q/text (describe-input (-> state :input)) 10 10))
     ;; ensure the state is returned
+    state))
+
+(defn update [state]
+  (let [radar @(:radar-state state)
+        {:keys [scene camera zoom]} radar
+        this-camera (or camera (get-center scene))
+        this-zoom (or zoom default-zoom)
+        scene-loaded (loaded? scene)
+        just-loaded (and (not (:loaded state)) scene-loaded)]
     (if just-loaded
-      ;; update our state
-      (assoc state :loaded true)
+      (do
+        (swap! (:radar-state state)
+               #(assoc %
+                       :zoom this-zoom
+                       :camera this-camera))
+        (assoc state :loaded true))
       state)))
 
 (defn on-key-press [state event]
@@ -215,6 +208,7 @@
       :setup setup
       :setup-params [state]
       :draw draw
+      :update update
       :renderer renderer
       :size (:size profile)
       :features [:resizable]

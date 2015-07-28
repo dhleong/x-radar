@@ -111,3 +111,29 @@
       (open-flight-plan state cid)
       (to-mode :normal))
     (doecho "You must select an aircraft to edit its flight plan")))
+
+;;
+;; View commands
+;;
+
+(defn move-view 
+  [machine state direction]
+  (if-let [dir 
+           (case direction
+             :left {:x -10}
+             :up {:y -10}
+             :right {:x 10}
+             :down {:y 10}
+             nil)]
+    ;; move!
+    (do
+      (swap! state 
+             (fn [state modifier]
+               (assoc state 
+                      :camera
+                      (merge-with + (:camera state) modifier)))
+             dir)
+      ;; return the machine unchanged
+      machine)
+    ;; invalid
+    (doecho "Invalid direction " direction)))

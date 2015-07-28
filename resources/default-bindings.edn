@@ -1,6 +1,10 @@
 
 #map/normal/i start-insert
 #map/normal/s start-select-aircraft
+#map/normal/h (move-view :left)
+#map/normal/j (move-view :down)
+#map/normal/k (move-view :up)
+#map/normal/l (move-view :right)
 
 #map/normal/<esc> stop-insert
 
