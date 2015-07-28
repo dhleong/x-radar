@@ -296,11 +296,14 @@
   (loaded? [this]
     (not (empty? @data-atom))))
   
-(defn load-sector [input]
+(defn load-sector [input & callback]
   (let [data-atom (atom {})
         scene (->SectorScene data-atom)]
     (def last-scene-atom data-atom) ;; NB  for testing purposes
-    (future (swap! data-atom (fn [_] (load-sector-data input))))
+    (future (do
+              (swap! data-atom (fn [_] (load-sector-data input)))
+              (when (seq callback) 
+                ((first callback)))))
     scene))
 
 ;; for testing...

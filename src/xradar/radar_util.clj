@@ -4,6 +4,7 @@
   (:require [quil
              [core :as q]
              [applet :refer [applet-close]]]
+            [seesaw.core :refer [invoke-later]]
             [xradar.util :refer [deep-merge map-coord]]))
 
 (defn redraw
