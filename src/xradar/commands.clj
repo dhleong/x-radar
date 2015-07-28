@@ -9,6 +9,10 @@
              [aircraft-selection :refer [aircraft-to-bindings bindings-to-aircraft]]
              [flight-plan :refer [open-flight-plan]]]))
 
+;; whether to use the native input instead of our
+;;  custom-drawn one. For now, native is preferred
+(def use-native-input true)
+
 (defn switch-mode
   [machine state new-mode]
   (assoc machine

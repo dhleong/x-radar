@@ -106,8 +106,7 @@
                   0 1 0)
         (q/end-camera))
       ;; TODO is there any way to reduce CPU load?
-      (draw-scene scene profile)
-      #_(q/pop-matrix))
+      (draw-scene scene profile))
     (if (not scene-loaded)
       (q/text "Loading..." 20 20))
     (let [radar-state (assoc radar :mode input-mode)]
@@ -175,6 +174,7 @@
                #(assoc %
                        :zoom this-zoom
                        :camera this-camera))
+        (q/no-loop)
         (assoc state :loaded true))
       state)))
 

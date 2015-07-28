@@ -23,16 +23,15 @@
 
 (defn in-bounds
   "Check if a coordinate is within the bounds
-  of the currently visible area"
+  of the currently visible area. Only works
+  inside sketch functions"
   [x y]
   (let [w (q/width)
         h (q/height)
         sx (q/screen-x x y)
         sy (q/screen-y x y)]
-    (or (and (>= sx 0)
-             (>= sy 0))
-        (and (<= sx w)
-             (<= sy h)))))
+    (and (<= 0 sx w)
+         (<= 0 sy h))))
 
 ;;
 ;; Wacky hacks

@@ -239,7 +239,7 @@
 ;;
 
 (defn- draw-line
-  [scene line]
+  [line]
   (let 
     [x1 (:x (:start line))
         y1 (:y (:start line))
@@ -251,7 +251,7 @@
       (q/line x1 y1 x2 y2))))
 
 (defn- draw-label
-  [scene label]
+  [label]
   (let [{:keys [x y]} (:coord label)]
     (when (in-bounds x y)
       (q/fill-int (:color label))
@@ -259,10 +259,10 @@
       (q/text (:label label) x y))))
 
 (defn- draw-each
-  [scene data mode artist]
+  [data mode artist]
   (doseq [element (get data mode)]
     (try
-      (artist scene element)
+      (artist element)
       (catch Exception e
         (throw (RuntimeException. 
                  (str "Error drawing " element " in " mode)
@@ -278,8 +278,8 @@
     (if-let [data @data-atom]
       (doseq [mode (-> profile :draw)]
         (case mode
-          :geo (draw-each this data :geo draw-line)
-          :labels (draw-each this data :labels draw-label)
+          :geo (draw-each data :geo draw-line)
+          :labels (draw-each data :labels draw-label)
           ;; else, unsupported type
           nil))))
   (get-center [this]
