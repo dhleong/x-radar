@@ -245,7 +245,7 @@
         y1 (:y (:start line))
         x2 (:x (:end line))
         y2 (:y (:end line))]
-    (when (and (in-bounds x1 y1) (in-bounds x2 y2))
+    (when (or (in-bounds x1 y1) (in-bounds x2 y2))
       (q/stroke-int (:color line))
       (q/stroke-weight 1)
       (q/line x1 y1 x2 y2))))
