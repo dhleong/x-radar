@@ -230,7 +230,7 @@
 
 (defn- add-aircraft
   "For testing only"
-  []
+  [radar]
   (update-aircraft radar (aircraft 2 "N040.46.18.052" "W073.51.27.664"))
   (update-aircraft radar (aircraft 3 "N040.46.29.321" "W073.52.04.109"))
   (update-aircraft radar (aircraft 4 "N040.46.38.053" "W073.52.21.403"))
@@ -244,7 +244,7 @@
       {:debug true}
       (load-sector 
         "/Users/dhleong/VRC/Support/ZNY.sct2"
-        add-aircraft)
+        #(add-aircraft radar))
         (reify XRadarNetwork
           (update-flightplan [this aircraft]
             (def last-action {:update-fp aircraft})))))
