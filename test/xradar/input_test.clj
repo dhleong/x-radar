@@ -1,4 +1,5 @@
 (ns xradar.input-test
+  (:refer-clojure :exclude [empty])
   (:require [clojure.test :refer :all]
             [xradar.input :refer :all]))
 
