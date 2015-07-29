@@ -9,9 +9,16 @@
              [aircraft-selection :refer [aircraft-to-bindings bindings-to-aircraft]]
              [flight-plan :refer [open-flight-plan]]]))
 
+;;
+;; Constants
+;;
+
 ;; whether to use the native input instead of our
 ;;  custom-drawn one. For now, native is preferred
 (def use-native-input true)
+
+(def move-distance 10)
+(def zoom-distance 50)
 
 (defn switch-mode
   [machine state new-mode]
@@ -124,10 +131,10 @@
   [machine state direction]
   (if-let [dir 
            (case direction
-             :left {:x -10}
-             :up {:y -10}
-             :right {:x 10}
-             :down {:y 10}
+             :left {:x (- move-distance)}
+             :up {:y (- move-distance)}
+             :right {:x move-distance}
+             :down {:y move-distance}
              nil)]
     ;; move!
     (do
@@ -141,3 +148,21 @@
       machine)
     ;; invalid
     (doecho "Invalid direction " direction)))
+
+(defn zoom-view
+  [machine state direction]
+  (if-let [dir
+           (case direction
+             :in (- zoom-distance)
+             :out zoom-distance)]
+    (do
+      (swap! state
+             (fn [state modifier]
+               (assoc state
+                      :zoom
+                      (+ (:zoom state) modifier)))
+             dir)
+      ;; return the machine unchanged
+      machine)
+    ;; invalid
+    (doecho "Invalid zoom direction " direction)))

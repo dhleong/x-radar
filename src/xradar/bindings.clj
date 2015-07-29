@@ -15,7 +15,7 @@
   "Read a key mapping"
   [parts value]
   (let [[_ mode mapping-string] parts
-        mapping-parts (re-seq #"(<([^>]+)>|\w)" mapping-string)
+        mapping-parts (re-seq #"(<([^>]+)>|\w|[+-_=;:,./?'\"])" mapping-string)
         mapping (map (fn [[_ simple special]]
                        (keyword 
                          (if (nil? special)

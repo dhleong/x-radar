@@ -65,6 +65,8 @@
   (let [key-raw (case (:key-code event)
                   27 "ESC"
                   9 "TAB"
+                  45 (str (:raw-key event))
+                  61 (str (:raw-key event))
                   ;; default; fetch
                   (KeyEvent/getKeyText (:key-code event)))
         modifiers (:modifiers machine)
