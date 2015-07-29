@@ -5,9 +5,12 @@
            state is the radar's state atom. The return
            value MUST be the new machine state, if any."}
   xradar.commands
-  (:require [xradar
+  (:require [quil.core :as q]
+            [xradar
              [aircraft-selection :refer [aircraft-to-bindings bindings-to-aircraft]]
-             [flight-plan :refer [open-flight-plan]]]))
+             [flight-plan :refer [open-flight-plan]]
+             [native-insert :refer [create-insert input-height]]
+             [radar-util :refer [get-location]]]))
 
 ;;
 ;; Constants
@@ -32,7 +35,19 @@
 
 (defn start-insert
   [machine state]
-  (to-mode :insert))
+  (if use-native-input
+    ;; build our input dialog
+    (let [{:keys [x y]} (get-location state)]
+      (assoc (to-mode :insert)
+             :insert-box 
+             (create-insert x 
+                            (+ y (q/height) (- input-height)) 
+                            (q/width)
+                            ;; FIXME we need a way to update the machine...
+                            :on-cancel identity
+                            :on-submit identity)))
+    ;; just the unfinished, custom input handling
+    (to-mode :insert)))
 
 (defn stop-insert
   [machine state]

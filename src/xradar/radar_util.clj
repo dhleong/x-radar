@@ -7,6 +7,14 @@
             [seesaw.core :refer [invoke-later]]
             [xradar.util :refer [deep-merge map-coord]]))
 
+(defn get-location
+  "Get the location on the screen of the radar window"
+  [radar-atom]
+  (let [point (-> @radar-atom
+                  :sketch
+                  .getLocationOnScreen)]
+    {:x (.getX point) :y (.getY point)}))
+
 (defn redraw
   "Schedule a redraw from anywhere"
   [radar-atom]
