@@ -2,7 +2,8 @@
   (:require [clojure.test :refer :all]
             [xradar
              [scene :refer :all]
-             [sector-scene :refer :all]])
+             [sector-scene :refer :all]
+             [util :refer [coord-scale]]])
   (:import [java.io StringReader]))
 
 ;;
@@ -78,29 +79,30 @@
     (let [data (load-data "[VOR]\nBOS 112.700 N042.00.00.000 W070.00.00.000")]
       (is (= [{:name "BOS"
                :freq "112.700"
-               :coord {:x -70 :y -42}}] (-> data :vor)))))
+               :coord {:x (* -70 coord-scale)
+                       :y (* -42 coord-scale)}}] (-> data :vor)))))
   (testing "[AIRPORT]"
     (let [data 
           (load-data "[AIRPORT]\nKBOS 128.800 N042.00.00.000 W070.00.00.000 B")]
       (is (= [{:name "KBOS"
                :freq "128.800"
-               :coord {:x -70 :y -42}
+               :coord {:x (* -70 coord-scale) :y (* -42 coord-scale)}
                :airspace "B"}] (-> data :airport)))))
   (testing "[GEO]"
     (let [data (load-data data-geo)]
-      (is (= [{:start {:x -71 :y -42}
-               :end {:x -71 :y -42}
+      (is (= [{:start {:x (* -71 coord-scale) :y (* -42 coord-scale)}
+               :end {:x (* -71 coord-scale) :y (* -42 coord-scale)}
                :color 0xffE0E0E0}
-              {:start {:x -71 :y -42}
-               :end {:x -71 :y -42}
+              {:start {:x (* -71 coord-scale) :y (* -42 coord-scale)}
+               :end {:x (* -71 coord-scale) :y (* -42 coord-scale)}
                :color 0xffFF0000}]
              (-> data :geo)))))
   (testing "[LABELS]"
     (let [data (load-data data-labels)]
       (is (= [{:label "S"
-               :coord {:x -71 :y -42}
+               :coord {:x (* -71 coord-scale) :y (* -42 coord-scale)}
                :color 0xffE0E0E0}
               {:label "Awesome Spot"
-               :coord {:x -71 :y -42}
+               :coord {:x (* -71 coord-scale) :y (* -42 coord-scale)}
                :color 0xffFF0000}]
              (-> data :labels))))))
