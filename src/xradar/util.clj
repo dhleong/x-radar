@@ -72,7 +72,9 @@
   "Used inside drawing functions to map a
   {:x, :y} coord as appropriate"
   [scene coord]
-  (if (or (map? scene) (loaded? scene))
+  (if (and
+        scene
+        (or (map? scene) (loaded? scene)))
     ;; loaded!
     {:x (* (:x coord) coord-scale (my-get-lon-scale scene))
      :y (* (:y coord) coord-scale)}

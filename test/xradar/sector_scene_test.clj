@@ -60,7 +60,6 @@
     (let [scene (load-sector-data
                   (StringReader. data-info))]
       ;; be lazy and hope we mapped correctly
-      (println scene)
       (is (not= {:x 42 :y 42} 
                 (parse-coord scene 
                              "S042.00.00.000"
