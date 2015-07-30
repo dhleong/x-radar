@@ -10,6 +10,7 @@
              [aircraft-selection :refer [aircraft-to-bindings bindings-to-aircraft]]
              [flight-plan :refer [open-flight-plan]]
              [native-insert :refer [create-insert input-height]]
+             [network :refer [send! send-to!]]
              [radar-util :refer [get-location redraw]]]))
 
 ;;
@@ -22,6 +23,20 @@
 
 (def move-distance 10)
 (def zoom-distance 50)
+
+(defn- default-input-submit
+  [state message]
+  (try
+    (let [network (:network @state)] 
+      (if-let [selected (:selected @state)]
+        (send-to! network selected message)
+        (send! network message)))
+    (catch Throwable e
+      (def last-exc e))))
+
+;;
+;; Util methods and macros
+;;
 
 (defn set-use-native-input! [do-use]
   (def use-native-input do-use))
@@ -82,22 +97,30 @@
 ;;
 
 (defn start-insert
-  [machine state]
+  [machine state & {:keys [prompt on-submit]}]
   (if use-native-input
     ;; build our input dialog
-    (let [{:keys [x y]} (get-location state)]
+    (let [{:keys [x y]} (get-location state)
+          selected-id (:selected @state)
+          selected (get (:aircraft @state) selected-id nil)
+          my-prompt 
+          (cond
+            (string? prompt) prompt
+            (not (nil? selected)) (str ">" (:callsign selected))
+            :else nil)
+          submit-handler (or on-submit default-input-submit)]
       (assoc (to-mode :insert)
              :insert-box 
              (create-insert 
                x 
                (+ y (q/height) (- input-height)) 
                (q/width)
+               :prompt my-prompt
                :on-cancel #(with-machine (to-mode :normal))
                :on-submit 
                #(with-machine
-                  ;; TODO dispatch the input value
-                  (-> (to-mode :normal)
-                      (assoc :last-echo (str ">> " %)))))))
+                  (submit-handler state %)
+                  (-> (to-mode :normal))))))
     ;; just the unfinished, custom input handling
     (to-mode :insert)))
 

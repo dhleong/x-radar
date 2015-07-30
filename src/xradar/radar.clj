@@ -249,6 +249,12 @@
         "/Users/dhleong/VRC/Support/ZNY.sct2"
         #(add-aircraft radar))
         (reify XRadarNetwork
+          (send! [this message]
+            ;; use future to avoid deadlock
+            (future (swap! (:input @radar) #(assoc % :last-echo (str ">>" message)))))
+          (send-to! [this cid message]
+            ;; use future to avoid deadlock
+            (future (swap! (:input @radar) #(assoc % :last-echo (str ">>" cid ": " message)))))
           (update-flightplan [this aircraft]
             (def last-action {:update-fp aircraft})))))
   "Opened!")
