@@ -82,8 +82,11 @@
   (q/smooth (get-in @state-atom [:profile :smoothing] 4))
   (q/frame-rate fps)
   (q/background-int (get-in @state-atom [:profile :scheme :background]))
-  {:radar-state state-atom
-   :input (create-input (-> @state-atom :profile))})
+  (let [input (create-input (-> @state-atom :profile))]
+    ;; add a reference to input in the radar state
+    (swap! state-atom #(assoc % :input input))
+    {:radar-state state-atom
+     :input input}))
 
 (defn draw [state]
   (let [radar @(:radar-state state)

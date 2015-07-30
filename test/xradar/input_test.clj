@@ -1,7 +1,11 @@
 (ns xradar.input-test
   (:refer-clojure :exclude [empty])
   (:require [clojure.test :refer :all]
-            [xradar.input :refer :all]))
+            [xradar
+             [commands :refer [set-use-native-input!]]
+             [input :refer :all]]))
+
+(set-use-native-input! false)
 
 (defn empty [] @(create-input {}))
 (defn- with-mods [& mods]

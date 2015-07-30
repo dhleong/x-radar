@@ -10,7 +10,7 @@
              [aircraft-selection :refer [aircraft-to-bindings bindings-to-aircraft]]
              [flight-plan :refer [open-flight-plan]]
              [native-insert :refer [create-insert input-height]]
-             [radar-util :refer [get-location]]]))
+             [radar-util :refer [get-location redraw]]]))
 
 ;;
 ;; Constants
@@ -23,6 +23,9 @@
 (def move-distance 10)
 (def zoom-distance 50)
 
+(defn set-use-native-input! [do-use]
+  (def use-native-input do-use))
+
 (defn switch-mode
   [machine state new-mode]
   (assoc machine
@@ -33,6 +36,51 @@
   [new-mode]
   `(switch-mode ~'machine ~'state ~new-mode))
 
+(defmacro with-machine
+  "When all you have is the radar state and want to
+  update the machine state, you can use this macro.
+  The body forms provided will be wrapped in a function
+  that is called like a normal input function with the
+  machine map and the state atom; the result of this
+  function call will be the new machine value, and
+  a redraw will be requested."
+  [& body]
+  `(swap! (:input @~'state) 
+          (fn [~'machine ~'state]
+            (redraw ~'state)
+            ~@body)
+          ~'state))
+
+(defn echo
+  [machine state & values]
+  ;; (assoc (stop-insert machine state)
+  ;;        :last-echo values)
+  (assoc machine :last-echo values))
+
+(defmacro doecho
+  [& args]
+  `(echo ~'machine ~'state ~@args))
+
+(defn eval-command
+  [machine state raw]
+  (let [raw-symbol? (or (symbol? raw) (string? raw))
+        command (if raw-symbol?
+                  (ns-resolve 'xradar.commands (symbol raw)))]
+    (cond 
+      ;; valid command? execute
+      command (command machine state)
+      ;; form? insert machine/state and execute
+      (and (not raw-symbol?) (seq raw))
+      (if-let [list-cmd (ns-resolve 'xradar.commands (first raw))]
+        (apply list-cmd machine state (rest raw))
+        (doecho (str "No such command:" (first raw))))
+      ;; no such thing :(
+      :else (doecho (str "No such command:" raw)))))
+
+;;
+;; Insert mode handling
+;;
+
 (defn start-insert
   [machine state]
   (if use-native-input
@@ -40,12 +88,16 @@
     (let [{:keys [x y]} (get-location state)]
       (assoc (to-mode :insert)
              :insert-box 
-             (create-insert x 
-                            (+ y (q/height) (- input-height)) 
-                            (q/width)
-                            ;; FIXME we need a way to update the machine...
-                            :on-cancel identity
-                            :on-submit identity)))
+             (create-insert 
+               x 
+               (+ y (q/height) (- input-height)) 
+               (q/width)
+               :on-cancel #(with-machine (to-mode :normal))
+               :on-submit 
+               #(with-machine
+                  ;; TODO dispatch the input value
+                  (-> (to-mode :normal)
+                      (assoc :last-echo (str ">> " %)))))))
     ;; just the unfinished, custom input handling
     (to-mode :insert)))
 
@@ -78,32 +130,6 @@
            (concat (:insert-buffer machine)
                    [(:raw-key last-press)])))))
 
-(defn echo
-  [machine state & values]
-  ;; TODO
-  (println values)
-  (assoc (stop-insert machine state)
-         :last-echo values))
-
-(defmacro doecho
-  [& args]
-  `(echo ~'machine ~'state ~@args))
-
-(defn eval-command
-  [machine state raw]
-  (let [raw-symbol? (or (symbol? raw) (string? raw))
-        command (if raw-symbol?
-                  (ns-resolve 'xradar.commands (symbol raw)))]
-    (cond 
-      ;; valid command? execute
-      command (command machine state)
-      ;; form? insert machine/state and execute
-      (and (not raw-symbol?) (seq raw))
-      (if-let [list-cmd (ns-resolve 'xradar.commands (first raw))]
-        (apply list-cmd machine state (rest raw))
-        (doecho (str "No such command:" (first raw))))
-      ;; no such thing :(
-      :else (doecho (str "No such command:" raw)))))
 
 ;;
 ;; Aircraft selection
