@@ -12,7 +12,8 @@
              [native-insert :refer [create-insert input-height]]
              [network :refer [send! send-to!]]
              [radar-util :refer [get-location redraw]]
-             [scene :refer [find-point]]]))
+             [scene :refer [find-point]]
+             [util :refer [in-bounds]]]))
 
 ;;
 ;; Constants
@@ -167,7 +168,8 @@
 
 (defn start-select-aircraft
   [machine state]
-  (let [craft (:aircraft @state)
+  (let [craft (->> (:aircraft @state)
+                   (filter #(in-bounds (:x %) (:y %))))
         aircraft-selections (aircraft-to-bindings craft 'select-aircraft)]
     (swap! state #(assoc %
                          :craft-bindings 
