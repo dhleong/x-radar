@@ -42,7 +42,7 @@
   (deep-merge {:mode (create-mode)
                :scheme schemes/default
                :draw [:geo :labels]
-               :smoothing 4
+               :smoothing 3
                :size default-size
                :timeout-len 1000 ;; time before a key sequence is dropped
                :win-position default-location}

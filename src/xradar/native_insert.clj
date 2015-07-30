@@ -8,11 +8,6 @@
 
 (def input-height 20)
 
-;; (defn set-undecorated!
-;;   [frame]
-;;   (.setUndecorated frame true)
-;;   frame)
-
 (defn- key-handler
   [on-submit on-cancel key-event]
   (def last-event key-event)
