@@ -9,6 +9,7 @@
 #map/normal/+ (zoom-view :in)
 #map/normal/= (zoom-view :in)
 #map/normal/- (zoom-view :out)
+#map/normal/m center-view
 
 #map/normal/<esc> stop-insert
 

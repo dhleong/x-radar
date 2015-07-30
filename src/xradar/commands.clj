@@ -11,7 +11,8 @@
              [flight-plan :refer [open-flight-plan]]
              [native-insert :refer [create-insert input-height]]
              [network :refer [send! send-to!]]
-             [radar-util :refer [get-location redraw]]]))
+             [radar-util :refer [get-location redraw]]
+             [scene :refer [find-point]]]))
 
 ;;
 ;; Constants
@@ -97,6 +98,12 @@
 ;;
 
 (defn start-insert
+  "Start insert mode to get some text input from the user.
+  Optionally you can provide a textual `prompt`, and a 
+  handler to be fired `on-submit`. 
+  `on-submit` should be a (fn [state value]) where `state` 
+  is the usual radar state atom, and `value` is the string
+  value provided by the user."
   [machine state & {:keys [prompt on-submit]}]
   (if use-native-input
     ;; build our input dialog
@@ -190,6 +197,27 @@
 ;;
 ;; View commands
 ;;
+
+(defn center-view
+  ([machine state]
+   (start-insert machine state 
+                 :prompt "Center On:"
+                 :on-submit #(with-machine
+                               (center-view machine %1 %2))))
+  ([machine state point-name]
+   (if-let [point
+            (find-point (:scene @state) point-name)]
+     (do 
+       (swap! state 
+              #(assoc %1 :camera %2)
+              (:coord point))
+       ;; return the machine unchanged
+       machine)
+     ;; FIXME we need a better system for callbacks.
+     ;;  Having to do this to avoid deadlock is obnoxious
+     (do (future (with-machine
+                   (doecho "Invalid location " point-name)))
+         machine))))
 
 (defn move-view 
   [machine state direction]

@@ -1,5 +1,7 @@
 (ns xradar.sector-scene-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure
+             [test :refer :all]
+             [string :refer [join]]]
             [xradar
              [scene :refer :all]
              [sector-scene :refer :all]
@@ -13,6 +15,9 @@
 (def data-info
   "[INFO]\nBoston Tower v5.0_FC\nBOS_TWR\nKBOS\nN042.20.54.750\nW071.00.21.920\n60\n45\n16\n1")
 
+(def data-airport
+  "[AIRPORT]\nKBOS 128.800 N042.00.00.000 W070.00.00.000 B")
+
 (def data-geo
   (str "#define Taxiway 14737632\n"
        "[GEO]\n"
@@ -24,6 +29,9 @@
        "[LABELS]\n"
        "\"S\" N042.00.00.000 W071.00.00.000 Taxiway\n"
        "\"Awesome Spot\" N042.00.00.000 W071.00.00.000 255"))
+
+(def data-vor
+  "[VOR]\nBOS 112.700 N042.00.00.000 W070.00.00.000")
 
 (def scene (->SectorScene (atom {})))
 
@@ -75,14 +83,14 @@
       (is (= 45 (-> data :info :nm-per-lon)))
       (is (== 16 (-> data :info :magnet-var)))))
   (testing "[VOR]"
-    (let [data (load-data "[VOR]\nBOS 112.700 N042.00.00.000 W070.00.00.000")]
+    (let [data (load-data data-vor)]
       (is (= [{:name "BOS"
                :freq "112.700"
                :coord {:x (* -70 coord-scale)
                        :y (* -42 coord-scale)}}] (-> data :vor)))))
   (testing "[AIRPORT]"
     (let [data 
-          (load-data "[AIRPORT]\nKBOS 128.800 N042.00.00.000 W070.00.00.000 B")]
+          (load-data data-airport)]
       (is (= [{:name "KBOS"
                :freq "128.800"
                :coord {:x (* -70 coord-scale) :y (* -42 coord-scale)}
@@ -105,3 +113,18 @@
                :coord {:x (* -71 coord-scale) :y (* -42 coord-scale)}
                :color 0xffFF0000}]
              (-> data :labels))))))
+
+(deftest methods-test
+  (testing "find-point"
+    (let [scene (load-sector-sync 
+                  (StringReader. 
+                    (join "\n" [data-info data-airport data-vor])))]
+      (let [kbos (find-point scene "KBOS")]
+        (is (= "KBOS" (:name kbos)))
+        (is (= "128.800" (:freq kbos))))
+      (let [kbos (find-point scene "kbos")]
+        (is (= "KBOS" (:name kbos)))
+        (is (= "128.800" (:freq kbos))))
+      (let [bos (find-point scene "BOS")]
+        (is (= "BOS" (:name bos)))
+        (is (= "112.700" (:freq bos)))))))

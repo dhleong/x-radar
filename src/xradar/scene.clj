@@ -19,6 +19,9 @@
   (get-lon-scale
     [this]
     "Get the longitude scaling")
+  (find-point
+    [this point-name]
+    "Find the named point")
   (loaded?
     [this]
     "Some scenery implementations may load asynchronously;
