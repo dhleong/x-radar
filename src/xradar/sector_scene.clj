@@ -255,7 +255,8 @@
   (let [{:keys [x y]} (:coord label)]
     (when (in-bounds x y)
       (q/fill-int (:color label))
-      (q/text-size 3.5)
+      (q/text-size 3.4)
+      (q/text-align :center :center)
       (q/text (:label label) x y))))
 
 (defn- draw-each

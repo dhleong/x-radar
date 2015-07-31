@@ -151,6 +151,7 @@
       nil)
     (when-let [echo (:last-echo input)]
       (q/text-size echo-text-size)
+      (q/text-align :left)
       (q/fill-int (-> scheme :echo))
       ;; (q/text nil)
       (q/text (join " " echo) 
