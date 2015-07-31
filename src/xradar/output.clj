@@ -10,6 +10,9 @@
 (def output-padding 10)
 (def output-size 14)
 
+;; eg: `[00:00:00] ` but as all spaces
+(def multi-line-prefix "           ")
+
 (defn append-output
   "Append a line of output"
   [radar text & {:keys [color]}]
@@ -23,10 +26,34 @@
     (redraw radar)))
 
 (defn format-text
-  [available-width char-width line]
-  ;; TODO split lines as necessary
-  [{:color (:color line)
-    :text (str "[" (:time line) "] " char-width (:text line))}])
+  "Splits text into multiple lines as necessary"
+  [chars-per-line line]
+  (let [color (:color line)
+        lines (partition-all (- chars-per-line 
+                                (count multi-line-prefix))
+                             (:text line))
+        time-text (str "[" (:time line) "] ") 
+        time-line {:color color
+                   :text (str time-text
+                              (apply str (first lines)))}
+        other-lines (rest lines)]
+      (-> (cons 
+            time-line
+            (map
+              (fn [text]
+                {:color color
+                 :text (apply str multi-line-prefix text)})
+              other-lines))
+          reverse)))
+
+;; public mostly for testing
+(defn build-output
+  [max-lines chars-per-line output-buffer]
+  (->> output-buffer
+       (take max-lines)
+       (mapcat format-text 
+               (repeat chars-per-line))
+       (take max-lines)))
 
 (defn draw-output
   [radar]
@@ -37,7 +64,8 @@
         max-output-count (-> radar :profile :output-size)
         max-output (* output-size max-output-count)
         char-width (q/text-width "M")
-        available-width (- (q/width) output-padding output-padding)]
+        available-width (- (q/width) output-padding output-padding)
+        chars-per-line (int (Math/floor (/ available-width char-width)))]
     (q/fill-int (-> scheme :output :background) 200)
     (q/no-stroke)
     (q/rect output-padding 
@@ -46,15 +74,14 @@
             available-width
             max-output)
     (q/fill-int (-> scheme :output :text))
-    (loop [output (->> @(:output-buffer radar)
-                       (take max-output-count)
-                       (mapcat format-text 
-                               (repeat available-width)
-                               (repeat char-width)))
+    (loop [output (build-output 
+                    max-output-count
+                    chars-per-line
+                    @(:output-buffer radar))
            offset 0]
       (when (seq output)
         (let [line (first output)]
-          (q/fill-int (or (:color (first output))
+          (q/fill-int (or (:color line)
                           (-> scheme :output :text)))
           (q/text (:text line) 
                   output-padding 
