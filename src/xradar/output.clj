@@ -10,7 +10,7 @@
 (def output-padding 10)
 (def output-size 14)
 
-(defn append
+(defn append-output
   "Append a line of output"
   [radar text & {:keys [color]}]
   (let [output (:output-buffer @radar)]
@@ -33,18 +33,19 @@
   (q/text-size output-size)
   (q/text-align :left)
   (q/rect-mode :corner)
-  (let [scheme (-> radar :scheme)
+  (let [scheme (-> radar :profile :scheme)
         max-output-count (-> radar :profile :output-size)
         max-output (* output-size max-output-count)
         char-width (q/text-width "M")
         available-width (- (q/width) output-padding output-padding)]
-    (q/fill-int (:output-background scheme))
+    (q/fill-int (-> scheme :output :background) 200)
+    (q/no-stroke)
     (q/rect output-padding 
-            (- (q/height)
-               output-padding
+            (- output-padding
                max-output)
             available-width
             max-output)
+    (q/fill-int (-> scheme :output :text))
     (loop [output (->> @(:output-buffer radar)
                        (take max-output-count)
                        (mapcat format-text 
@@ -53,12 +54,11 @@
            offset 0]
       (when (seq output)
         (let [line (first output)]
-          (q/fill-int (:color (first output)))
+          (q/fill-int (or (:color (first output))
+                          (-> scheme :output :text)))
           (q/text (:text line) 
                   output-padding 
-                  (- (q/height) 
-                     output-padding
-                     offset)))
+                  (- offset)))
         (when (< offset max-output)
           (recur (rest output)
                  (+ offset output-size)))))))

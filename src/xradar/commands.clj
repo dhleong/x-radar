@@ -72,6 +72,7 @@
   [machine state & values]
   ;; (assoc (stop-insert machine state)
   ;;        :last-echo values)
+  (redraw state)
   (assoc machine :last-echo values))
 
 (defmacro doecho

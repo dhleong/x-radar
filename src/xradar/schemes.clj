@@ -4,7 +4,9 @@
 
 (def default
   {:background 0xff36363F
-   :output-background 0xaa36363F
+   :output
+   {:background 0xff36363F
+    :text 0xffFFFFFF}
    :aircraft 
    {:untracked 0xff00EE00
     :tracked 0xff00FF00

@@ -107,6 +107,7 @@
         just-loaded (and (not (:loaded state)) scene-loaded)]
     (q/background-int (:background scheme))
     (q/text-mode :shape)
+    (q/hint :enable-depth-test)
     (when scene-loaded
       (let [{:keys [x y]} this-camera]
         (q/begin-camera)
@@ -125,6 +126,7 @@
                 craft)]
           (m/draw-aircraft mode radar-state scheme updated-craft))))
     ;; reset camera mode for UI
+    (q/hint :disable-depth-test)
     (q/camera)
     (when-let [selected-craft (get aircraft selected nil)]
       ;; draw selected aircraft
@@ -162,8 +164,8 @@
       (q/text (if (string? echo)
                echo
                (join " " echo)) 
-              bar-padding
-              (- (q/height) bar-padding bar-text-size bar-padding)))
+              (+ bar-padding (q/text-width "XXX1234") bar-padding)
+              (- (q/height) bar-padding )))
     ;; draw output
     (q/with-translation [0 (- (q/height) 
                               bar-padding bar-text-size bar-padding)]
