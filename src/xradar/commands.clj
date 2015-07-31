@@ -168,8 +168,11 @@
 
 (defn start-select-aircraft
   [machine state]
-  (let [craft (->> (:aircraft @state)
-                   (filter #(in-bounds (:x %) (:y %))))
+  (let [craft 
+        (->> (:aircraft @state)
+             vals
+             #_(map #(in-bounds (:x %) (:y %)))
+             (map :cid))
         aircraft-selections (aircraft-to-bindings craft 'select-aircraft)]
     (swap! state #(assoc %
                          :craft-bindings 

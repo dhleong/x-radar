@@ -30,7 +30,8 @@
 
 (defn aircraft-to-bindings
   "Generate a binding map for selecting
-  the given aircraft"
+  the given aircraft.
+  `aircraft` is a list of CIDs"
   [aircraft callback]
   (reduce
     deep-merge
@@ -38,4 +39,4 @@
       (fn [[key-1 key-2] craft]
         {key-1 {key-2 {:call `(~callback ~craft)}}})
       (pairs)
-      (keys aircraft))))
+      aircraft)))

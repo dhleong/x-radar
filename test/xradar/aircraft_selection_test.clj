@@ -5,7 +5,7 @@
 (deftest to-bindings-test
   (testing "Bind"
     (is (= {:j {:f {:call '(hi 1234)}}}
-           (aircraft-to-bindings {1234 {:cid 1234}} 'hi)))))
+           (aircraft-to-bindings [1234] 'hi)))))
 
 (deftest to-aircraft-test
   (testing "Unbind"
