@@ -101,6 +101,7 @@
         scene-loaded (loaded? scene)
         just-loaded (and (not (:loaded state)) scene-loaded)]
     (q/background-int (:background scheme))
+    (q/text-mode :shape)
     (when scene-loaded
       (let [{:keys [x y]} this-camera]
         (q/begin-camera)
@@ -108,7 +109,6 @@
                   x y 0
                   0 1 0)
         (q/end-camera))
-      ;; TODO is there any way to reduce CPU load?
       (draw-scene scene profile))
     (if (not scene-loaded)
       (q/text "Loading..." 20 20))
