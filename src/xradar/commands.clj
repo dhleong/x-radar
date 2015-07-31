@@ -11,6 +11,7 @@
              [flight-plan :refer [open-flight-plan]]
              [native-insert :refer [create-insert input-height]]
              [network :refer [send! send-to!]]
+             [output :refer [append-output]]
              [radar-util :refer [get-location redraw]]
              [scene :refer [find-point]]
              [util :refer [in-bounds]]]))
@@ -31,8 +32,12 @@
   (try
     (let [network (:network @state)] 
       (if-let [selected (:selected @state)]
-        (send-to! network selected message)
-        (send! network message)))
+        (let [craft (get (:aircraft @state) selected {:callsign selected})]
+          (append-output state (str (:callsign craft) ", " message))
+          (send-to! network selected message))
+        (do
+          (append-output state message)
+          (send! network message))))
     (catch Throwable e
       (def last-exc e))))
 
