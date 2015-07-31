@@ -9,13 +9,14 @@
              [commands :refer [use-native-input]]
              [input :refer [create-input describe-input 
                             process-input-press process-input-release]]
+             [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork]]
+             [output :refer [draw-output]]
              [radar-util :refer [update-aircraft]]
              [schemes :as schemes]
              [scene :refer [XScene get-center get-lon-scale
                             get-magnetic-var loaded? draw-scene]]
              [sector-scene :refer [load-sector parse-coord]]
-             [mode :as m :refer [RadarMode]]
              [util :refer [deep-merge]]]
             [xradar.modes.xradar-mode :refer [create-mode]]))
 
@@ -82,6 +83,9 @@
 
 (defn setup [state-atom]
   (q/smooth (get-in @state-atom [:profile :smoothing] 4))
+  (let [monospaced-12 (q/create-font "Monospaced" 12)
+        monospaced-14 (q/create-font "Monospaced" 14)]
+    (q/text-font monospaced-14))
   (q/frame-rate fps)
   (q/background-int (get-in @state-atom [:profile :scheme :background]))
   (let [input (create-input (-> @state-atom :profile))]
@@ -155,9 +159,15 @@
       (q/text-align :left)
       (q/fill-int (-> scheme :echo))
       ;; (q/text nil)
-      (q/text (join " " echo) 
+      (q/text (if (string? echo)
+               echo
+               (join " " echo)) 
               bar-padding
               (- (q/height) bar-padding bar-text-size bar-padding)))
+    ;; draw output
+    (q/with-translation [0 (- (q/height) 
+                              bar-padding bar-text-size bar-padding)]
+      (draw-output radar))
     ;; debugging
     (when (-> radar :profile :debug)
       (q/fill-int 0xffFFFFFF)
