@@ -13,6 +13,7 @@
 (def strip-height 60)
 (def strip-border 2)
 (def strip-padding 5)
+(def half-padding (/ strip-padding 2))
 (def text-size 12)
 
 (defn render-strip
@@ -67,23 +68,23 @@
     (q/translate col2-width 0)
     (q/text (str (:depart craft)) 
             0
-            text-size)
+            (+ half-padding text-size))
     (q/text (str (:arrive craft)) 
             0
-            (* 2 text-size))
+            (+ half-padding (* 2 text-size)))
     (q/text (str (:alternate craft)) 
             0
-            (* 3 text-size))
+            (+ half-padding (* 3 text-size)))
     (q/text (str (:scratch craft)) 
             0
-            (* 4 text-size))
+            (+ half-padding (* 4 text-size)))
     ;; column 3 (route/remarks)
     (q/translate col2-width 0)
     (q/text (str (:route craft))
-            0 0
+            0 half-padding
             route-width (* 3 text-size))
     (q/text (str (:remarks craft))
-            0 (* 3 text-size)
+            0 (+ half-padding (* 3 text-size))
             route-width (* 4 text-size))
     ))
 
