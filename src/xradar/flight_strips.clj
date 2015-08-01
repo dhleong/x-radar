@@ -12,6 +12,7 @@
 (def strip-width 500)
 (def strip-height 60)
 (def strip-border 2)
+(def strip-lines 1)
 (def strip-padding 5)
 (def half-padding (/ strip-padding 2))
 (def text-size 12)
@@ -28,8 +29,12 @@
   (let [flight-type (get craft :flight-type :unknown)
         background (-> scheme :strips flight-type)
         foreground (-> scheme :strips :foreground)
+        char-width (q/text-width "M")
         col1-width (q/text-width "ACA1234B")
         col2-width (q/text-width "FL123 ")
+        col2-x (+ col1-width col2-width)
+        col3-x (+ col2-x col2-width)
+        large-row-height (+ strip-padding text-size)
         route-width (- strip-width 
                        strip-border strip-border
                        strip-padding strip-padding
@@ -40,30 +45,45 @@
     (with-alpha q/fill-int background)
     (q/stroke-weight strip-border)
     (q/rect 0 0 strip-width strip-height)
+    (q/stroke-weight strip-lines)
+    (q/line col1-width 0 col1-width strip-height)
+    (q/line col2-x 0 
+            col2-x strip-height)
+    (q/line col3-x 0 
+            col3-x strip-height)
+    (q/with-translation [col1-width (+  strip-padding)]
+      (q/line 0 large-row-height col2-width large-row-height)
+      (q/line 0 (* 2 large-row-height)
+              col2-width (* 2 large-row-height)))
     (q/fill-int foreground)
     (q/text-size text-size)
     ;; column 1
     (q/translate (+ strip-padding strip-border) strip-border)
     (q/text (str (:callsign craft)) 
             0
-            (+ strip-padding text-size))
+            large-row-height)
     (q/text (str (:type craft)) 
             0
-            (* 2 (+ strip-padding text-size)))
-    (q/text (str (:cid craft)) 
+            (* 2 large-row-height))
+    (q/text (apply str (take 3 (str (:cid craft)))) 
             0
-            (* 3 (+ strip-padding text-size)))
+            (* 3 large-row-height))
+    (q/text (case (:rules craft)
+              :ifr "I"
+              :vfr "V")
+            (- col1-width (* 2 char-width) strip-padding)
+            (* 3 large-row-height))
     ;; column 2
     (q/translate col1-width 0)
     (q/text (str (:squawk craft)) 
             0
-            (+ strip-padding text-size))
+            large-row-height)
     (q/text (str (:temp-alt craft)) 
             0
-            (* 2 (+ strip-padding text-size)))
+            (* 2 large-row-height))
     (q/text (str (:cruise craft)) 
             0
-            (* 3 (+ strip-padding text-size)))
+            (* 3 large-row-height))
     ;; column 2
     (q/translate col2-width 0)
     (q/text (str (:depart craft)) 
@@ -85,8 +105,7 @@
             route-width (* 3 text-size))
     (q/text (str (:remarks craft))
             0 (+ half-padding (* 3 text-size))
-            route-width (* 4 text-size))
-    ))
+            route-width (* 4 text-size))))
 
 (defn render-strip-bay
   "Render the flight strip bay"
