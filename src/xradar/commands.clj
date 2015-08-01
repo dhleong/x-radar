@@ -169,6 +169,23 @@
            (concat (:insert-buffer machine)
                    [(:raw-key last-press)])))))
 
+;;
+;; Output navigation
+;;
+
+(defn output-scroll
+  [machine state amount]
+  (swap! state 
+         #(let [outputs (count @(:output-buffer @state))
+                output-size (-> @state :profile :output-size)
+                last-scroll (:output-scroll %)
+                new-scroll (+ amount last-scroll)
+                adjusted (-> new-scroll
+                             (max 0)
+                             (min (- outputs output-size)))]
+            (assoc % :output-scroll adjusted)))
+  ;; no change in machine
+  machine)
 
 ;;
 ;; Aircraft selection

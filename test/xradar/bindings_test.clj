@@ -18,6 +18,9 @@
   (testing "Single special key mode map"
     (let [bindings (bindings "#map/insert/<esc> stop-insert")]
       (is (= {:insert {:esc {:call 'stop-insert}}} bindings))))
+  (testing "Key with modifier"
+    (let [bindings (bindings "#map/normal/<ctrl-f> stop-insert")]
+      (is (= {:normal {:ctrl-f {:call 'stop-insert}}} bindings))))
   (testing "Multi-key mode map"
     (let [bindings (bindings "#map/normal/gi start-insert")]
       (is (= {:normal {:g {:i {:call 'start-insert}}}} bindings))))

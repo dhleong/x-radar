@@ -11,6 +11,12 @@
 #map/normal/- (zoom-view :out)
 #map/normal/m center-view
 
+;; output scrolling
+#map/normal/<ctrl-b> (output-scroll 1)
+#map/normal/<ctrl-f> (output-scroll -1)
+#map/normal/gg (output-scroll 999999)
+#map/normal/G (output-scroll -999999)
+
 #map/normal/<esc> stop-insert
 
 ; planned; demos multi-key maps

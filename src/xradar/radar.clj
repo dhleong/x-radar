@@ -220,6 +220,7 @@
         state (atom {:profile profile
                      :network network
                      :output-buffer (atom [])
+                     :output-scroll 0
                      :scene scene
                      :aircraft {}})]
     (q/defsketch xradar

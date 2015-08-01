@@ -79,7 +79,9 @@
         max-output (* output-size max-output-count)
         char-width (q/text-width "M")
         available-width (- (q/width) output-padding output-padding)
-        chars-per-line (int (Math/floor (/ available-width char-width)))]
+        chars-per-line (int (Math/floor (/ available-width char-width)))
+        output-buffer @(:output-buffer radar)
+        output-scroll (:output-scroll radar)]
     (with-alpha q/fill-int (-> scheme :output :background))
     (q/no-stroke)
     (q/rect output-padding 
@@ -91,7 +93,7 @@
     (loop [output (build-output 
                     max-output-count
                     chars-per-line
-                    @(:output-buffer radar))
+                    (drop output-scroll output-buffer))
            offset 0]
       (when (seq output)
         (let [line (first output)]

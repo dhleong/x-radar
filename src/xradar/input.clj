@@ -149,7 +149,7 @@
   [machine-atom]
   ;; TODO
   (let [machine @machine-atom]
-    (str (select-keys machine [:current-bindings :mode :selected]))))
+    (str (select-keys machine [:current-bindings :mode :selected :last-press]))))
 
 (defn process-input-press
   "Process key pressed and update the machine"
