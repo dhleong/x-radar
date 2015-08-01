@@ -83,6 +83,7 @@
   [scene coord]
   (if (and
         scene
+        (:x coord)
         (or (map? scene) (loaded? scene)))
     ;; loaded!
     {:x (* (:x coord) coord-scale (my-get-lon-scale scene))
