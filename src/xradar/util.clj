@@ -9,6 +9,15 @@
 
 (def coord-scale 10000)
 
+(defn with-alpha
+  "Call the given color predicate, providing an alpha
+  parameter if it was packed into the int as 0xARGB"
+  [pred color-int]
+  (let [alpha (bit-shift-right color-int 24)]
+    (if (= 0 alpha)
+      (pred color-int)
+      (pred color-int alpha))))
+
 (defn deep-merge [base-map new-map]
   (if (nil? new-map)
     ;; just use the base

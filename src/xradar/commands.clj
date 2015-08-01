@@ -33,10 +33,12 @@
     (let [network (:network @state)] 
       (if-let [selected (:selected @state)]
         (let [craft (get (:aircraft @state) selected {:callsign selected})]
-          (append-output state (str (:callsign craft) ", " message))
+          (append-output state (str (:callsign craft) ", " message)
+                         :color :outgoing)
           (send-to! network selected message))
         (do
-          (append-output state message)
+          (append-output state message
+                         :color :outgoing)
           (send! network message))))
     (catch Throwable e
       (def last-exc e))))

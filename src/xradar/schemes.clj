@@ -5,8 +5,10 @@
 (def default
   {:background 0xff36363F
    :output
-   {:background 0xff36363F
-    :text 0xffFFFFFF}
+   {:background 0xcc36363F
+    :outgoing 0xffFFFFFF
+    :text 0xffCCCCCC
+    :warning 0xffEE0000}
    :aircraft 
    {:untracked 0xff00EE00
     :tracked 0xff00FF00

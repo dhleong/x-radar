@@ -5,7 +5,9 @@
             [clojure.java.io :as io]
             [clj-time.local :as l]
             [quil.core :as q]
-            [xradar.radar-util :refer [redraw]]))
+            [xradar
+             [radar-util :refer [redraw]]
+             [util :refer [with-alpha]]]))
 
 (def output-padding 10)
 (def output-size 14)
@@ -21,7 +23,9 @@
            (fn [buf new-entry] 
              (cons new-entry buf))
            {:text text
-            :time (l/format-local-time (l/local-now) :hour-minute-second)
+            :time (l/format-local-time 
+                    (l/local-now) 
+                    :hour-minute-second)
             :color color})
     (redraw radar)))
 
@@ -55,6 +59,16 @@
                (repeat chars-per-line))
        (take max-lines)))
 
+(defn resolve-color
+  "Resolve the color to use to render the line.
+  Public mostly for testing"
+  [scheme line]
+  (let [color (:color line)]
+    (cond
+      (keyword? color) (-> scheme :output color)
+      (integer? color) color 
+      :else (-> scheme :output :text))))
+
 (defn draw-output
   [radar]
   (q/text-size output-size)
@@ -66,7 +80,7 @@
         char-width (q/text-width "M")
         available-width (- (q/width) output-padding output-padding)
         chars-per-line (int (Math/floor (/ available-width char-width)))]
-    (q/fill-int (-> scheme :output :background) 200)
+    (with-alpha q/fill-int (-> scheme :output :background))
     (q/no-stroke)
     (q/rect output-padding 
             (- output-padding
@@ -81,8 +95,7 @@
            offset 0]
       (when (seq output)
         (let [line (first output)]
-          (q/fill-int (or (:color line)
-                          (-> scheme :output :text)))
+          (q/fill-int (resolve-color scheme line))
           (q/text (:text line) 
                   output-padding 
                   (- offset)))
