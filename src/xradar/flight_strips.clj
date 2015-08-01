@@ -17,6 +17,8 @@
 (def half-padding (/ strip-padding 2))
 (def text-size 12)
 
+(def max-bays 2)
+
 (defn render-strip
   "Renders the strip at the 'current location.'
   In other words, you must translate as appropriate
@@ -119,3 +121,41 @@
                       (assoc craft 
                              ;; :flight-type :vfr
                              :selected false))))))
+
+(defn create-strip-bay
+  "Create the datastructure that stores flight strips"
+  []
+  (atom {:cursor [0 0]
+         ;; bays; each is just stored as an index
+         0 []
+         1 []}))
+
+(defn move-current-strip
+  "Move the strip under the cursor in the provided
+  direction. Has the effect of moving the cursor as well"
+  [bay-atom direction]
+  (let [bay @bay-atom
+        [old-x old-y] (:cursor bay)
+        [new-x new-y] (move-strip-cursor bay-atom direction)]
+    (when-not (and (= old-x new-x) (= old-y new-y))
+      ;; TODO
+      nil)))
+
+(defn move-strip-cursor
+  "Move the strip cursor in the provided direction.
+  Returns the new cursor"
+  [bay-atom direction]
+  (let [bay @bay-atom
+        [old-x old-y] (:cursor bay)
+        [mod-x mod-y] (case direction
+                        :left [-1 0]
+                        :up [0 -1]
+                        :right [1 0]
+                        :down [0 1])
+        new-x (min (- max-bays 1)
+                   (max 0 (+ old-x mod-x)))
+        new-y (min (- (count (get bay new-x)) 1)
+                   (max 0 (+ old-y mod-y)))]
+    (when (get (get bay new-x) new-y)
+      (swap! bay-atom assoc :cursor [new-x new-y]))
+    (:cursor @bay-atom)))
