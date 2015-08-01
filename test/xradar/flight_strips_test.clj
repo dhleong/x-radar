@@ -44,5 +44,5 @@
   (testing "Normal"
     (let [bay (create-strip-bay)]
       (swap! bay assoc 0 ["Foo" "Bar"])
-      #_(is (= ["Foo" "Bar"] (get-col bay 0)))
-      #_(is (= ["Bar" "Foo"] (slide bay :down))))))
+      (is (= ["Foo" "Bar"] (get-col bay 0)))
+      (is (= ["Bar" "Foo"] (slide bay :down))))))

@@ -130,6 +130,23 @@
          0 []
          1 []}))
 
+(defn- move-strip-pred
+  [bay old-x old-y new-x new-y]
+  (let [strip (get (get bay old-x) old-y)
+        old-bay-before (subvec (get bay old-x)
+                               0 old-y)
+        old-bay-after (subvec (get bay old-x)
+                              (inc old-y))
+        old-bay (vec (concat old-bay-before old-bay-after))
+        with-removed (assoc bay old-x old-bay)
+        new-bay-before (subvec (get with-removed new-x)
+                               0 new-y)
+        new-bay-after (subvec (get with-removed new-x)
+                              new-y)
+        new-bay (vec (concat new-bay-before [strip] new-bay-after))]
+    (assoc with-removed
+           new-x new-bay)))
+
 (defn move-current-strip
   "Move the strip under the cursor in the provided
   direction. Has the effect of moving the cursor as well"
@@ -138,8 +155,9 @@
         [old-x old-y] (:cursor bay)
         [new-x new-y] (move-strip-cursor bay-atom direction)]
     (when-not (and (= old-x new-x) (= old-y new-y))
-      ;; TODO
-      nil)))
+      (swap! bay-atom 
+             move-strip-pred 
+             old-x old-y new-x new-y))))
 
 (defn move-strip-cursor
   "Move the strip cursor in the provided direction.
