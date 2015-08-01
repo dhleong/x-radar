@@ -104,7 +104,7 @@
               (field "Alternate" :alternate)
               [[(s/button :text "Refresh Plan") "grow"]]
               ;
-              (field "Cruse:" :cruise)
+              (field "Cruise:" :cruise)
               scratch-field
               (field "Squawk" :squawk)
               [[(s/button :text "Assign Squawk") "grow"]]

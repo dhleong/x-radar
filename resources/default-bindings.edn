@@ -1,3 +1,6 @@
+;;
+;; Normal mode
+;;
 
 #map/normal/i start-insert
 #map/normal/s start-select-aircraft
@@ -11,7 +14,7 @@
 #map/normal/- (zoom-view :out)
 #map/normal/m center-view
 
-;; output scrolling
+; output scrolling
 #map/normal/<ctrl-b> (output-scroll 1)
 #map/normal/<ctrl-f> (output-scroll -1)
 #map/normal/gg (output-scroll 999999)
@@ -22,4 +25,25 @@
 ; planned; demos multi-key maps
 #map/normal/od toggle-departures
 #map/normal/of toggle-flight-strips
+#map/normal/os toggle-flight-strips
 #map/normal/op toggle-flight-plan
+
+
+;;
+;; Flight Strip mode ("strips")
+;;
+
+#map/strips/h (move-strip-cursor :left)
+#map/strips/j (move-strip-cursor :down)
+#map/strips/k (move-strip-cursor :up)
+#map/strips/l (move-strip-cursor :right)
+
+#map/strips/H (move-current-strip :left)
+#map/strips/J (move-current-strip :down)
+#map/strips/K (move-current-strip :up)
+#map/strips/L (move-current-strip :right)
+
+; "a" for "amend"; "o" for "open"
+#map/strips/a edit-current-strip
+#map/strips/o edit-current-strip
+#map/strips/p push-current-strip
