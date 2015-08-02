@@ -14,7 +14,7 @@
   (get @bay col))
 
 (defn slide
-  [bay dir & col]
+  [bay dir & [col]]
   (move-current-strip bay dir)
   (if col
     (get-col bay col)
@@ -127,7 +127,15 @@
     (let [bay (create-strip-bay)]
       (swap! bay assoc 0 ["Foo" "Bar"])
       (is (= ["Foo" "Bar"] (get-col bay 0)))
-      (is (= ["Bar" "Foo"] (slide bay :down))))))
+      (is (= ["Bar" "Foo"] (slide bay :down)))
+      ;; we should be allowed to slide into
+      ;;  empty bays
+      (is (= ["Bar"] (slide bay :right)))
+      (is (= ["Foo"] (get-col bay 1)))
+      ;; we cannot, however, keep going
+      (is (= ["Foo"] (slide bay :right 1)))
+      ;; but we can go back
+      (is (= ["Foo" "Bar"] (slide bay :left))))))
 
 (deftest delete-strip-test
   (testing "Normal"

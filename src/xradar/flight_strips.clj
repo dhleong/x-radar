@@ -209,8 +209,10 @@
 
 (defn move-strip-cursor
   "Move the strip cursor in the provided direction.
+  If force-move is true, we will be allowed to move
+  into empty bays/columns.
   Returns the new cursor"
-  [bay-atom direction]
+  [bay-atom direction & {:keys [force-move]}]
   (let [bay @bay-atom
         [old-x old-y] (:cursor bay)
         [mod-x mod-y] (case direction
@@ -220,9 +222,12 @@
                         :down [0 1])
         new-x (min (- max-bays 1)
                    (max 0 (+ old-x mod-x)))
-        new-y (min (- (count (get bay new-x)) 1)
-                   (max 0 (+ old-y mod-y)))]
-    (when (get (get bay new-x) new-y)
+        new-y (max 0 (min (- (count (get bay new-x)) 1)
+                          (+ old-y mod-y)))]
+    (when (or (and force-move 
+                   (< -1 new-x max-bays)
+                   (>= new-y 0)) 
+              (get (get bay new-x) new-y))
       (swap! bay-atom assoc :cursor [new-x new-y]))
     (:cursor @bay-atom)))
 
@@ -255,7 +260,8 @@
   [bay-atom direction]
   (let [bay @bay-atom
         [old-x old-y] (:cursor bay)
-        [new-x new-y] (move-strip-cursor bay-atom direction)]
+        [new-x new-y] (move-strip-cursor bay-atom direction 
+                                         :force-move true)]
     (when-not (and (= old-x new-x) (= old-y new-y))
       (swap! bay-atom 
              move-strip-pred 
