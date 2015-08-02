@@ -206,6 +206,26 @@
         (assoc with-removed
                new-x new-bay)))))
 
+
+(defn move-strip-cursor
+  "Move the strip cursor in the provided direction.
+  Returns the new cursor"
+  [bay-atom direction]
+  (let [bay @bay-atom
+        [old-x old-y] (:cursor bay)
+        [mod-x mod-y] (case direction
+                        :left [-1 0]
+                        :up [0 -1]
+                        :right [1 0]
+                        :down [0 1])
+        new-x (min (- max-bays 1)
+                   (max 0 (+ old-x mod-x)))
+        new-y (min (- (count (get bay new-x)) 1)
+                   (max 0 (+ old-y mod-y)))]
+    (when (get (get bay new-x) new-y)
+      (swap! bay-atom assoc :cursor [new-x new-y]))
+    (:cursor @bay-atom)))
+
 (defn add-strip
   "Add a strip for the given client id"
   [bay-atom cid]
@@ -240,22 +260,3 @@
       (swap! bay-atom 
              move-strip-pred 
              old-x old-y new-x new-y))))
-
-(defn move-strip-cursor
-  "Move the strip cursor in the provided direction.
-  Returns the new cursor"
-  [bay-atom direction]
-  (let [bay @bay-atom
-        [old-x old-y] (:cursor bay)
-        [mod-x mod-y] (case direction
-                        :left [-1 0]
-                        :up [0 -1]
-                        :right [1 0]
-                        :down [0 1])
-        new-x (min (- max-bays 1)
-                   (max 0 (+ old-x mod-x)))
-        new-y (min (- (count (get bay new-x)) 1)
-                   (max 0 (+ old-y mod-y)))]
-    (when (get (get bay new-x) new-y)
-      (swap! bay-atom assoc :cursor [new-x new-y]))
-    (:cursor @bay-atom)))
