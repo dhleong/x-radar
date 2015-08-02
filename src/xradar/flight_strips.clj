@@ -190,6 +190,14 @@
            move-strip-pred 
            old-x old-y)))
 
+(defn get-current-strip
+  "Returns the CID associated with the
+  currently selected flight strip"
+  [bay-atom]
+  (let [bay @bay-atom
+        [x y] (:cursor bay) ]
+    (get (bay x) y)))
+
 (defn move-current-strip
   "Move the strip under the cursor in the provided
   direction. Has the effect of moving the cursor as well"

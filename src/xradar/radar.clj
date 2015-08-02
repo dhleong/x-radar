@@ -31,6 +31,11 @@
 (def fps 7)
 (def renderer :opengl)
 
+;; NB we disable looping and just redraw
+;;  to avoid pegging the CPU. If you don't
+;;  care, you can loop for faster redraw
+(def dont-loop true)
+
 (def bar-text-size 14)
 (def bar-padding 10)
 (def echo-text-size 13.5)
@@ -157,7 +162,10 @@
                  (+ b (q/text-descent)))))
       ;; flight strips mode
       :strips
-      (render-strip-bay radar)
+      (try
+        (render-strip-bay radar)
+        (catch Exception e
+          (def last-exc e)))
       ;; default; do nothing
       nil)
     (when-let [echo (:last-echo input)]
@@ -196,7 +204,7 @@
                #(assoc %
                        :zoom this-zoom
                        :camera this-camera))
-        (q/no-loop)
+        (when dont-loop (q/no-loop))
         (assoc state :loaded true))
       state)))
 

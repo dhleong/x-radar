@@ -310,6 +310,16 @@
       (to-mode :normal)
       machine)))
 
+(defn edit-current-strip
+  [machine state]
+  (let [bay-atom (:strips @state)]
+    (if-let [cid (fs/get-current-strip bay-atom)]
+      (do
+        (open-flight-plan state cid)
+        ;; NB stay in flight strip mode
+        machine)
+      (doecho "No selected strip"))))
+
 (defn move-strip-cursor
   [machine state direction]
   (fs/move-strip-cursor (:strips @state) direction)
