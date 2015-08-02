@@ -25,5 +25,6 @@
     :departure 0xffB1ACD0
     :local 0xffDFDF9F
     :over 0xffE5B39C
+    :noplan 0xffCCCCCC
     :unknown 0xffCCCCCC
     :vfr 0xffCADFD5}})

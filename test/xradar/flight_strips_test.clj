@@ -2,6 +2,9 @@
   (:require [clojure.test :refer :all]
             [xradar.flight-strips :refer :all]))
 
+(def fields {:arrive ["KLGA"]
+             :depart ["KLGA"]})
+
 (defn move
   [bay dir]
   (move-strip-cursor bay dir))
@@ -23,6 +26,78 @@
   (if col
     (get-col bay col)
     (get-col bay 0)))
+
+
+(deftest resolve-flight-type-test
+  (testing "Arrivals"
+    (is (= :arrival (resolve-flight-type
+                      fields 
+                      {:rules :ifr 
+                       :route "Any"
+                       :depart "KBOS" 
+                       :arrive "KLGA"})))
+    (is (= :arrival (resolve-flight-type
+                      fields 
+                      {:rules :vfr
+                       :route "Any"
+                       :depart "KBOS" 
+                       :arrive "KLGA"}))))
+  (testing "Departures"
+    (is (= :departure (resolve-flight-type
+                        fields 
+                        {:rules :ifr
+                         :route "Any"
+                         :depart "KLGA"
+                         :arrive "KBOS"}))))
+  (testing "VFR"
+    (is (= :vfr (resolve-flight-type
+                  fields 
+                  {:rules :vfr
+                   :depart "KLGA"
+                   :arrive "KBOS"}))))
+  (testing "Local flights"
+    (is (= :local (resolve-flight-type
+                    fields 
+                    {:rules :vfr
+                     :depart "KLGA"
+                     :arrive "KLGA"})))
+    (is (= :local (resolve-flight-type
+                    fields 
+                    {:rules :ifr
+                     :depart "KLGA"
+                     :arrive "KLGA"}))))
+  (testing "Overflights"
+    (is (= :over (resolve-flight-type
+                   fields 
+                   {:rules :vfr
+                    :route "Any"
+                    :depart "KJFK"
+                    :arrive "KBOS"})))
+    (is (= :over (resolve-flight-type
+                   fields 
+                   {:rules :ifr
+                    :route "Any"
+                    :depart "KJFK"
+                    :arrive "KBOS"}))))
+  (testing "Unknown"
+    (is (= :unknown (resolve-flight-type
+                      {:arrive [] :depart []}
+                      {:rules :vfr
+                       :route "Any"
+                       :depart "KLGA"
+                       :arrive "KBOS"})))
+    (is (= :unknown (resolve-flight-type
+                      {:arrive [] :depart []}
+                      {:rules :ifr
+                       :route "Any"
+                       :depart "KLGA"
+                       :arrive "KBOS"}))))
+  (testing "No plan loaded"
+    (is (= :noplan (resolve-flight-type
+                     fields 
+                     {:rules :ifr
+                      :depart "KLGA"
+                      :arrive "KBOS"})))))
 
 (deftest move-cursor-test
   (testing "Boundaries"

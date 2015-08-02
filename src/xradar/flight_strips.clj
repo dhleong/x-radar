@@ -19,6 +19,35 @@
 
 (def max-bays 2)
 
+(defn resolve-flight-type
+  [fields craft]
+  (let [depart (:depart craft)
+        arrive (:arrive craft)
+        arrive-fields (set (:arrive fields))
+        depart-fields (set (:depart fields))
+        arriving? (contains? arrive-fields arrive)
+        departing? (contains? depart-fields depart)]
+    (cond 
+      ;; local must be arriving and departing at the 
+      ;;  same airport, one that we control
+      (and (= depart arrive)
+           (or arriving? departing?))
+      :local
+      ;; vfr is only when departing
+      (and (= :vfr (:rules craft))
+           departing?) 
+      :vfr
+      ;; easy ones
+      (empty? (:route craft)) :noplan
+      arriving? :arrival
+      departing? :departure
+      ;; if either of these are empty at this point,
+      ;;   we have no idea what it is
+      (or (empty? arrive-fields) (empty? depart-fields))
+      :unknown
+      ;; otherwise, must be an over flight
+      :else :over)))
+
 (defn render-strip
   "Renders the strip at the 'current location.'
   In other words, you must translate as appropriate
@@ -113,7 +142,8 @@
 (defn render-strip-bay
   "Render the flight strip bay"
   [radar]
-  (let [scheme (-> radar :profile :scheme)
+  (let [profile (-> radar :profile)
+        scheme (-> profile :scheme)
         aircraft (-> radar :aircraft)
         strips @(-> radar :strips)
         [cursor-x cursor-y] (-> strips :cursor)
@@ -136,8 +166,8 @@
               (render-strip
                 scheme
                 (assoc craft 
-                       ;; TODO determine flight type
-                       ;; :flight-type :vfr
+                       :flight-type (resolve-flight-type (:fields profile)
+                                                         craft)
                        :selected (and (= x cursor-x)
                                       (= y cursor-y)))))))))))
 

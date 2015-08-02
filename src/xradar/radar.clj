@@ -47,10 +47,13 @@
 (defn- fill-profile
   "Ensure some defaults exist in the profile"
   [profile]
-  (deep-merge {:mode (create-mode)
-               :scheme schemes/default
+  (deep-merge {:fields 
+               {:arrive ["KLGA"]
+                :depart ["KLGA"]}
                :draw [:geo :labels]
+               :mode (create-mode)
                :output-size 5
+               :scheme schemes/default
                :smoothing 3
                :size default-size
                :timeout-len 1000 ;; time before a key sequence is dropped
@@ -162,10 +165,7 @@
                  (+ b (q/text-descent)))))
       ;; flight strips mode
       :strips
-      (try
-        (render-strip-bay radar)
-        (catch Exception e
-          (def last-exc e)))
+      (render-strip-bay radar)
       ;; default; do nothing
       nil)
     (when-let [echo (:last-echo input)]
