@@ -17,6 +17,13 @@
     (get-col bay col)
     (get-col bay 0)))
 
+(defn del
+  [bay & col]
+  (delete-current-strip bay)
+  (if col
+    (get-col bay col)
+    (get-col bay 0)))
+
 (deftest move-cursor-test
   (testing "Boundaries"
     (let [bay (create-strip-bay)]
@@ -46,3 +53,11 @@
       (swap! bay assoc 0 ["Foo" "Bar"])
       (is (= ["Foo" "Bar"] (get-col bay 0)))
       (is (= ["Bar" "Foo"] (slide bay :down))))))
+
+(deftest delete-strip-test
+  (testing "Normal"
+    (let [bay (create-strip-bay)]
+      (swap! bay assoc 0 ["Foo" "Bar"])
+      (is (= ["Foo" "Bar"] (get-col bay 0)))
+      (is (= ["Bar"] (del bay)))
+      (is (= [] (del bay))))))

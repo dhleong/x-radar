@@ -9,7 +9,7 @@
              [commands :refer [use-native-input]]
              [input :refer [create-input describe-input 
                             process-input-press process-input-release]]
-             [flight-strips :refer [render-strip-bay]]
+             [flight-strips :refer [create-strip-bay render-strip-bay]]
              [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork]]
              [output :refer [draw-output]]
@@ -155,6 +155,9 @@
                  (- (q/height) bar-text-size bar-padding) 
                  (- (q/width) bar-padding)
                  (+ b (q/text-descent)))))
+      ;; flight strips mode
+      :strips
+      (render-strip-bay radar)
       ;; default; do nothing
       nil)
     (when-let [echo (:last-echo input)]
@@ -171,8 +174,6 @@
     (q/with-translation [0 (- (q/height) 
                               bar-padding bar-text-size bar-padding)]
       (draw-output radar))
-    ;; draw flight strips
-    (render-strip-bay radar nil) ;; TODO
     ;; debugging
     (when (-> radar :profile :debug)
       (q/fill-int 0xffFFFFFF)
@@ -225,6 +226,7 @@
                      :output-buffer (atom [])
                      :output-scroll 0
                      :scene scene
+                     :strips (create-strip-bay)
                      :aircraft {}})]
     (q/defsketch xradar
       :title "xRadar"

@@ -111,16 +111,34 @@
 
 (defn render-strip-bay
   "Render the flight strip bay"
-  [radar strips]
-  ;; TODO
+  [radar]
   (let [scheme (-> radar :profile :scheme)
-        aircraft (-> radar :aircraft)]
-    (when-let [craft (first (vals aircraft))]
-      (q/with-translation [10 50]
-        (render-strip scheme
-                      (assoc craft 
-                             ;; :flight-type :vfr
-                             :selected false))))))
+        aircraft (-> radar :aircraft)
+        strips @(-> radar :strips)
+        [cursor-x cursor-y] (-> strips :cursor)
+        translation-x (* cursor-x strip-width)
+        translate-vec (if (> (+ translation-x strip-width) 
+                             (q/width))
+                        ;; if rendering it in the normal place
+                        ;;  would put it off screen, translate
+                        ;;  it to be in a nice place
+                        [(- translation-x) 0]
+                        ;; otherwise, do nothing
+                        [0 0])]
+    (q/with-translation translate-vec
+      ;; theres a bit of hax here, but that's okay...
+      (doseq [x (range max-bays)
+            y (range (max (count (get strips 0)) (count (get strips 1))))]
+        (when-let [cid (get (get strips x) y)]
+          (when-let [craft (get aircraft cid)]
+            (q/with-translation [(* x strip-width) (* y strip-height)]
+              (render-strip
+                scheme
+                (assoc craft 
+                       ;; TODO determine flight type
+                       ;; :flight-type :vfr
+                       :selected (and (= x cursor-x)
+                                      (= y cursor-y)))))))))))
 
 (defn create-strip-bay
   "Create the datastructure that stores flight strips"
@@ -130,22 +148,47 @@
          0 []
          1 []}))
 
+(defn bays-empty?
+  [bay-atom]
+  (let [bays @bay-atom]
+    (and (empty? (get bays 0))
+         (empty? (get bays 1)))))
+
 (defn- move-strip-pred
-  [bay old-x old-y new-x new-y]
+  [bay old-x old-y & [new-x new-y]]
   (let [strip (get (get bay old-x) old-y)
         old-bay-before (subvec (get bay old-x)
                                0 old-y)
         old-bay-after (subvec (get bay old-x)
                               (inc old-y))
         old-bay (vec (concat old-bay-before old-bay-after))
-        with-removed (assoc bay old-x old-bay)
-        new-bay-before (subvec (get with-removed new-x)
-                               0 new-y)
-        new-bay-after (subvec (get with-removed new-x)
-                              new-y)
-        new-bay (vec (concat new-bay-before [strip] new-bay-after))]
-    (assoc with-removed
-           new-x new-bay)))
+        with-removed (assoc bay old-x old-bay)]
+    (if (nil? new-x)
+      ;; easy; we were just removing
+      with-removed
+      ;; we were moving...
+      (let [new-bay-before (subvec (get with-removed new-x)
+                                   0 new-y)
+            new-bay-after (subvec (get with-removed new-x)
+                                  new-y)
+            new-bay (vec (concat new-bay-before [strip] new-bay-after))]
+        (assoc with-removed
+               new-x new-bay)))))
+
+(defn add-strip
+  "Add a strip for the given client id"
+  [bay-atom cid]
+  (swap! bay-atom 
+         #(assoc % 0 (vec (cons cid (get % 0))))))
+
+(defn delete-current-strip
+  [bay-atom]
+  (let [bay @bay-atom
+        [old-x old-y] (:cursor bay)
+        _ (move-strip-cursor bay-atom :up)]
+    (swap! bay-atom 
+           move-strip-pred 
+           old-x old-y)))
 
 (defn move-current-strip
   "Move the strip under the cursor in the provided

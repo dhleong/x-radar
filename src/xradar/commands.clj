@@ -9,6 +9,7 @@
             [xradar
              [aircraft-selection :refer [aircraft-to-bindings bindings-to-aircraft]]
              [flight-plan :refer [open-flight-plan]]
+             [flight-strips :as fs]
              [native-insert :refer [create-insert input-height]]
              [network :refer [send! send-to!]]
              [output :refer [append-output]]
@@ -288,3 +289,44 @@
       machine)
     ;; invalid
     (doecho "Invalid zoom direction " direction)))
+
+;;
+;; Flight strip commands
+;;
+
+(defn add-strip
+  [machine state]
+  (if-let [cid (:selected @state)]
+    (do 
+      (fs/add-strip (:strips @state) cid)
+      (doecho "Added flight strip"))
+    (doecho "You must select an aircraft to add its flight strip")))
+
+(defn delete-current-strip
+  [machine state]
+  (let [strips (:strips @state)]
+    (fs/delete-current-strip strips)
+    (if (fs/bays-empty? strips)
+      (to-mode :normal)
+      machine)))
+
+(defn move-strip-cursor
+  [machine state direction]
+  (fs/move-strip-cursor (:strips @state) direction)
+  machine)
+
+(defn move-current-strip
+  [machine state direction]
+  (fs/move-current-strip (:strips @state) direction)
+  machine)
+
+(defn toggle-flight-strips
+  [machine state]
+  (let [new-mode 
+        (case (:mode machine)
+             :strips :normal
+             :strips)] 
+    (if (and (= :strips new-mode)
+             (fs/bays-empty? (:strips @state)))
+      (doecho "No flight strips")
+      (to-mode new-mode))))

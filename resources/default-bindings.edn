@@ -5,6 +5,8 @@
 #map/normal/i start-insert
 #map/normal/s start-select-aircraft
 
+#map/normal/a add-strip
+
 #map/normal/h (move-view :left)
 #map/normal/j (move-view :down)
 #map/normal/k (move-view :up)
@@ -43,6 +45,8 @@
 #map/strips/K (move-current-strip :up)
 #map/strips/L (move-current-strip :right)
 
+;; use shift-D to make it harder to do accidentally
+#map/strips/D delete-current-strip
 ; "a" for "amend"; "o" for "open"
 #map/strips/a edit-current-strip
 #map/strips/o edit-current-strip
