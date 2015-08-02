@@ -147,13 +147,13 @@
         aircraft (-> radar :aircraft)
         strips @(-> radar :strips)
         [cursor-x cursor-y] (-> strips :cursor)
-        translation-x (* cursor-x strip-width)
-        translate-vec (if (> (+ translation-x strip-width) 
-                             (q/width))
+        translation-x (* (inc cursor-x) strip-width)
+        delta (- (q/width) translation-x)
+        translate-vec (if (< delta 0)
                         ;; if rendering it in the normal place
                         ;;  would put it off screen, translate
                         ;;  it to be in a nice place
-                        [(- translation-x) 0]
+                        [delta 0]
                         ;; otherwise, do nothing
                         [0 0])]
     (q/with-translation translate-vec
