@@ -28,12 +28,14 @@
   :flight-type <:departure|:arrival|:local|:vfr|:over>
   :selected <bool>"
   [scheme craft]
+  (q/text-size text-size)
+  (q/text-align :left)
   (let [flight-type (get craft :flight-type :unknown)
         background (-> scheme :strips flight-type)
         foreground (-> scheme :strips :foreground)
         char-width (q/text-width "M")
         col1-width (q/text-width "ACA1234B")
-        col2-width (q/text-width "FL123 ")
+        col2-width (q/text-width " FL123 ")
         col2-x (+ col1-width col2-width)
         col3-x (+ col2-x col2-width)
         large-row-height (+ strip-padding text-size)
@@ -58,7 +60,6 @@
       (q/line 0 (* 2 large-row-height)
               col2-width (* 2 large-row-height)))
     (q/fill-int foreground)
-    (q/text-size text-size)
     ;; column 1
     (q/translate (+ strip-padding strip-border) strip-border)
     (q/text (str (:callsign craft)) 
@@ -128,7 +129,7 @@
     (q/with-translation translate-vec
       ;; theres a bit of hax here, but that's okay...
       (doseq [x (range max-bays)
-            y (range (max (count (get strips 0)) (count (get strips 1))))]
+              y (range (max (count (get strips 0)) (count (get strips 1))))]
         (when-let [cid (get (get strips x) y)]
           (when-let [craft (get aircraft cid)]
             (q/with-translation [(* x strip-width) (* y strip-height)]
