@@ -4,11 +4,6 @@
 
 (def default
   {:background 0xff36363F
-   :output
-   {:background 0xcc36363F
-    :outgoing 0xffFFFFFF
-    :text 0xffCCCCCC
-    :warning 0xffEE0000}
    :aircraft 
    {:untracked 0xff00EE00
     :tracked 0xff00FF00
@@ -16,4 +11,23 @@
    :echo 0xffFFFFFF
    :input
    {:text 0xffFFFFFF
-    :box 0xffEEEEEE}})
+    :box 0xffEEEEEE}
+   :output
+   {:background 0xcc36363F
+    :outgoing 0xffFFFFFF
+    :text 0xffCCCCCC
+    :warning 0xffEE0000}
+   :strips
+   {:border 0xff000000
+    :selected-border 0xffFFFFFF
+    :separator
+    {:background 0xffCCCCCC
+     :text 0xff000000}
+    :foreground 0xff000000
+    :arrival 0xffCFAFBF
+    :departure 0xffB1ACD0
+    :local 0xffDFDF9F
+    :over 0xffE5B39C
+    :noplan 0xffCCCCCC
+    :unknown 0xffCCCCCC
+    :vfr 0xffCADFD5}})

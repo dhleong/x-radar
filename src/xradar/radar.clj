@@ -9,6 +9,7 @@
              [commands :refer [use-native-input]]
              [input :refer [create-input describe-input 
                             process-input-press process-input-release]]
+             [flight-strips :refer [create-strip-bay render-strip-bay]]
              [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork]]
              [output :refer [draw-output]]
@@ -30,6 +31,11 @@
 (def fps 7)
 (def renderer :opengl)
 
+;; NB we disable looping and just redraw
+;;  to avoid pegging the CPU. If you don't
+;;  care, you can loop for faster redraw
+(def dont-loop true)
+
 (def bar-text-size 14)
 (def bar-padding 10)
 (def echo-text-size 13.5)
@@ -41,10 +47,13 @@
 (defn- fill-profile
   "Ensure some defaults exist in the profile"
   [profile]
-  (deep-merge {:mode (create-mode)
-               :scheme schemes/default
+  (deep-merge {:fields 
+               {:arrive ["KLGA"]
+                :depart ["KLGA"]}
                :draw [:geo :labels]
+               :mode (create-mode)
                :output-size 5
+               :scheme schemes/default
                :smoothing 3
                :size default-size
                :timeout-len 1000 ;; time before a key sequence is dropped
@@ -154,6 +163,9 @@
                  (- (q/height) bar-text-size bar-padding) 
                  (- (q/width) bar-padding)
                  (+ b (q/text-descent)))))
+      ;; flight strips mode
+      :strips
+      (render-strip-bay radar)
       ;; default; do nothing
       nil)
     (when-let [echo (:last-echo input)]
@@ -192,7 +204,7 @@
                #(assoc %
                        :zoom this-zoom
                        :camera this-camera))
-        (q/no-loop)
+        (when dont-loop (q/no-loop))
         (assoc state :loaded true))
       state)))
 
@@ -222,6 +234,7 @@
                      :output-buffer (atom [])
                      :output-scroll 0
                      :scene scene
+                     :strips (create-strip-bay)
                      :aircraft {}})]
     (q/defsketch xradar
       :title "xRadar"
