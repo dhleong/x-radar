@@ -5,16 +5,18 @@
            state is the radar's state atom. The return
            value MUST be the new machine state, if any."}
   xradar.commands
-  (:require [quil.core :as q]
+  (:require [clojure.test :refer [function?]]
+            [quil.core :as q]
             [xradar
-             [aircraft-selection :refer [aircraft-to-bindings bindings-to-aircraft]]
              [flight-plan :refer [open-flight-plan]]
              [flight-strips :as fs]
              [native-insert :refer [create-insert input-height]]
-             [network :refer [send! send-to!]]
+             [network :refer [get-controllers push-strip! send! send-to!]]
              [output :refer [append-output]]
              [radar-util :refer [get-location redraw]]
              [scene :refer [find-point]]
+             [selection :refer [to-bindings from-bindings]]
+             [selection-mode :as sm]
              [util :refer [in-bounds]]]))
 
 ;;
@@ -95,6 +97,8 @@
     (cond 
       ;; valid command? execute
       command (command machine state)
+      ;; function? call it
+      (function? command) (command)
       ;; form? insert machine/state and execute
       (and (not raw-symbol?) (seq raw))
       (if-let [list-cmd (ns-resolve 'xradar.commands (first raw))]
@@ -205,12 +209,15 @@
   (let [craft 
         (->> (:aircraft @state)
              vals
+             ;; NB: this doesn't work, since the
+             ;;  camera will have been reset
+             ;;  at the point this is called
              #_(map #(in-bounds (:x %) (:y %)))
              (map :cid))
-        aircraft-selections (aircraft-to-bindings craft 'select-aircraft)]
+        aircraft-selections (to-bindings craft 'select-aircraft)]
     (swap! state #(assoc %
                          :craft-bindings 
-                         (bindings-to-aircraft aircraft-selections)))
+                         (from-bindings aircraft-selections)))
     (assoc (to-mode :select-aircraft)
            :current-bindings aircraft-selections)))
 
@@ -220,6 +227,14 @@
                        :selected cid 
                        :craft-bindings {}))
   (to-mode :normal))
+
+;;
+;; Selection mode
+;;
+
+(defn start-select
+  [machine state & args]
+  (apply sm/start machine state args))
 
 ;;
 ;; Window toggling
@@ -336,6 +351,39 @@
         ;; NB stay in flight strip mode
         machine)
       (doecho "No selected strip"))))
+
+(defn cancel-push-current-strip
+  [machine state]
+  (to-mode :strips))
+
+(defn push-current-strip-to-controller
+  "Callback command for push-current-strip"
+  [machine state controller]
+  (let [bay-atom (:strips @state)
+        network (:network @state)]
+    (when-let [cid (fs/get-current-strip bay-atom)]
+      (when-let [craft (get (:aircraft @state) cid)]
+        (push-strip! network (:cid controller) craft)
+        (redraw state)
+        (assoc (to-mode :strips)
+               :last-echo (str "Pushed " (:callsign craft) 
+                               " to " (:callsign controller)))))))
+
+(defn push-current-strip
+  [machine state]
+  (let [bay-atom (:strips @state)
+        network (:network @state)
+        targets (get-controllers network)]
+    (if-not (empty? targets)
+      (if-let [cid (fs/get-current-strip bay-atom)]
+        (start-select machine state
+          :items targets
+          :prompt "Receiving controller:"
+          :to-string #(:callsign %)
+          :on-cancel 'cancel-push-current-strip
+          :on-select 'push-current-strip-to-controller)
+        (doecho "No selected strip"))
+      (doecho "No other controllers to push to"))))
 
 (defn move-strip-cursor
   [machine state direction]

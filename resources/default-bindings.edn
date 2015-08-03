@@ -24,7 +24,7 @@
 
 #map/normal/<esc> stop-insert
 
-; planned; demos multi-key maps
+; `od` is a TODO
 #map/normal/od toggle-departures
 #map/normal/of toggle-flight-strips
 #map/normal/os toggle-flight-strips

@@ -4,6 +4,15 @@
 
 (defprotocol XRadarNetwork
   "Protocol for network actions"
+  (get-controllers
+    [this]
+    "Return a list of online controllers. Each
+    is a map that looks like:
+    {:cid <id> :callsign \"LGA_TWR\"}")
+  (push-strip!
+    [this controller-id aircraft]
+    "Push a flight strip to the controller with
+    the given id")
   (send!
     [this message]
     "Send a message on the active frequency")

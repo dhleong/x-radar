@@ -18,6 +18,7 @@
              [scene :refer [XScene get-center get-lon-scale
                             get-magnetic-var loaded? draw-scene]]
              [sector-scene :refer [load-sector parse-coord]]
+             [selection-mode :refer [render-selections]]
              [util :refer [deep-merge]]]
             [xradar.modes.xradar-mode :refer [create-mode]]))
 
@@ -166,6 +167,8 @@
       ;; flight strips mode
       :strips
       (render-strip-bay radar)
+      :select
+      (render-selections radar)
       ;; default; do nothing
       nil)
     (when-let [echo (:last-echo input)]
@@ -272,6 +275,13 @@
   #_(update-aircraft radar (aircraft 7 100 200))
   #_(update-aircraft radar (aircraft 8 300 300)))
 
+(defn- make-controllers
+  "For testing only"
+  []
+  [{:cid 111 :callsign "JFK_GND"}
+   {:cid 112 :callsign "JFK_TWR"}
+   {:cid 113 :callsign "LGA_TWR"}])
+
 (defn- testing []
   (def radar 
     (create-radar 
@@ -280,6 +290,11 @@
         "/Users/dhleong/VRC/Support/ZNY.sct2"
         #(add-aircraft radar))
         (reify XRadarNetwork
+          (get-controllers [this]
+            (make-controllers))
+          (push-strip! [this cid strip]
+            ;; just ignore
+            nil)
           (send! [this message]
             ;; use future to avoid deadlock
             (future (swap! (:input @radar) #(assoc % :last-echo (str ">>" message)))))
