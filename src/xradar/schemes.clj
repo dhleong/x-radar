@@ -20,6 +20,9 @@
    :strips
    {:border 0xff000000
     :selected-border 0xffFFFFFF
+    :separator
+    {:background 0xffCCCCCC
+     :text 0xff000000}
     :foreground 0xff000000
     :arrival 0xffCFAFBF
     :departure 0xffB1ACD0

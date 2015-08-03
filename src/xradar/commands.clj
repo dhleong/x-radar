@@ -120,13 +120,18 @@
     (let [{:keys [x y]} (get-location state)
           selected-id (:selected @state)
           selected (get (:aircraft @state) selected-id nil)
+          ;; NB don't change modes if we have a custom on-submit.
+          ;; Especially since we're using native input...
+          moded (if on-submit
+                  machine
+                  (to-mode :insert))
           my-prompt 
           (cond
             (string? prompt) prompt
             (not (nil? selected)) (str ">" (:callsign selected))
             :else nil)
           submit-handler (or on-submit default-input-submit)]
-      (assoc (to-mode :insert)
+      (assoc moded
              :insert-box 
              (create-insert 
                x 
@@ -136,8 +141,11 @@
                :on-cancel #(with-machine (to-mode :normal))
                :on-submit 
                #(with-machine
-                  (submit-handler state %)
-                  (-> (to-mode :normal))))))
+                  (let [new-machine (submit-handler machine state %)]
+                    (redraw state)
+                    (if (:mode new-machine)
+                     new-machine
+                     (-> (to-mode :normal))))))))
     ;; just the unfinished, custom input handling
     (to-mode :insert)))
 
@@ -233,8 +241,7 @@
   ([machine state]
    (start-insert machine state 
                  :prompt "Center On:"
-                 :on-submit #(with-machine
-                               (center-view machine %1 %2))))
+                 :on-submit center-view))
   ([machine state point-name]
    (if-let [point
             (find-point (:scene @state) point-name)]
@@ -301,6 +308,16 @@
       (fs/add-strip (:strips @state) cid)
       (doecho "Added flight strip"))
     (doecho "You must select an aircraft to add its flight strip")))
+
+(defn add-strip-separator
+  ([machine state]
+   (start-insert machine state 
+                 :prompt "Separator label:"
+                 :on-submit add-strip-separator))
+  ([machine state label]
+   (fs/add-separator (:strips @state) label)
+   ;; make sure we stay in strips mode
+   (to-mode :strips)))
 
 (defn delete-current-strip
   [machine state]

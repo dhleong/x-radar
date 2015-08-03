@@ -16,6 +16,7 @@
 (def strip-padding 5)
 (def half-padding (/ strip-padding 2))
 (def text-size 12)
+(def separator-text-size 17)
 
 (def max-bays 2)
 
@@ -139,6 +140,19 @@
             0 (+ half-padding (* 3 text-size))
             route-width (* 4 text-size))))
 
+(defn render-strip-separator
+  [scheme label selected?]
+  (if selected?
+    (q/stroke-int (-> scheme :strips :selected-border))
+    (q/stroke-int (-> scheme :strips :border)))
+  (with-alpha q/fill-int (-> scheme :strips :separator :background))
+  (q/stroke-weight strip-border)
+  (q/rect 0 0 strip-width strip-height)
+  (q/text-size separator-text-size)
+  (q/text-align :center)
+  (q/fill-int (-> scheme :strips :separator :text))
+  (q/text label (/ strip-width 2) (/ strip-height 2)))
+
 (defn render-strip-bay
   "Render the flight strip bay"
   [radar]
@@ -161,15 +175,24 @@
       (doseq [x (range max-bays)
               y (range (max (count (get strips 0)) (count (get strips 1))))]
         (when-let [cid (get (get strips x) y)]
-          (when-let [craft (get aircraft cid)]
+          (let [craft (get aircraft cid)
+                selected (and (= x cursor-x)
+                              (= y cursor-y))]
             (q/with-translation [(* x strip-width) (* y strip-height)]
-              (render-strip
-                scheme
-                (assoc craft 
-                       :flight-type (resolve-flight-type (:fields profile)
-                                                         craft)
-                       :selected (and (= x cursor-x)
-                                      (= y cursor-y)))))))))))
+              (cond 
+                craft
+                (render-strip
+                  scheme
+                  (assoc craft 
+                         :flight-type (resolve-flight-type (:fields profile)
+                                                           craft)
+                         :selected selected))
+                ;; is it a separator?
+                (string? cid)
+                (render-strip-separator
+                  scheme
+                  cid
+                  selected)))))))))
 
 (defn create-strip-bay
   "Create the datastructure that stores flight strips"
@@ -236,6 +259,12 @@
   [bay-atom cid]
   (swap! bay-atom 
          #(assoc % 0 (vec (cons cid (get % 0))))))
+
+(defn add-separator
+  "Add a separator with the given label"
+  [bay-atom label]
+  ;; NB it's the same thing, really
+  (add-strip bay-atom label))
 
 (defn delete-current-strip
   [bay-atom]
