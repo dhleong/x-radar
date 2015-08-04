@@ -26,7 +26,7 @@
           body)]
     `(if-let [handler# 
               (try
-                (condp match-key (:last-press ~'machine)
+                (condp match-key (:key (:last-press ~'machine))
                   ~@body-full)
                 (catch IllegalArgumentException e#
                   nil))]
