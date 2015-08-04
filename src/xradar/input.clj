@@ -10,23 +10,21 @@
              [util :refer [deep-merge]]])
   (:import [java.awt.event KeyEvent]))
 
-(defn- match-key [matcher event]
-  (if (keyword? matcher)
-    (and (= matcher (:key event))
-         (empty? (:modifiers event)))
-    (let [key-pressed (last matcher)
-          mods (apply hash-set (drop-last matcher))]
-      (and (= key-pressed (:key event))
-           (= mods (:modifiers event))))))
+(defn- stop-insert-if-necessary
+  [machine state]
+  (def stop-insert? (:last-press machine))
+  (if (> (count (:current-sequence machine)) 1)
+    (c/stop-insert machine state)
+    (assoc machine :current-sequence [])))
 
 (defmacro exec-press [& body]
   (let [body-full
         (if (even? (count body)) 
-          (concat body ['c/stop-insert])
+          (concat body ['stop-insert-if-necessary])
           body)]
     `(if-let [handler# 
               (try
-                (condp match-key (:key (:last-press ~'machine))
+                (condp = (:key (:last-press ~'machine))
                   ~@body-full)
                 (catch IllegalArgumentException e#
                   nil))]
@@ -52,6 +50,7 @@
 ;
 (defmethod pressed-in-mode :default
   [machine state]
+  (def called-default (:last-press machine))
   (exec-press
     :esc c/stop-insert))
 
@@ -119,14 +118,18 @@
     :command (add-modifier machine :cmd)
     :control (add-modifier machine :ctrl)
     ;; default
-  ;; NB: last echo is cleared on any keypress!
+    ;; NB: last echo is cleared on any keypress!
     (let [new-machine (assoc machine :last-echo nil)
           modded-event (translate-event new-machine event)
           current-bindings (-> new-machine :current-bindings)
-          the-key (:key modded-event)]
+          the-key (:key modded-event)
+          current-sequence (conj 
+                             (or (:current-sequence new-machine) [])
+                             the-key)
+          sequenced-machine (assoc new-machine :current-sequence current-sequence)]
       (if-let [branch (get current-bindings the-key)]
-        (follow-key-branch new-machine state branch)
-        (pressed-in-mode (assoc new-machine :last-press modded-event)
+        (follow-key-branch sequenced-machine state branch)
+        (pressed-in-mode (assoc sequenced-machine :last-press modded-event)
                          state)))))
 
 (defn- process-release
@@ -149,7 +152,7 @@
   [machine-atom]
   ;; TODO
   (let [machine @machine-atom]
-    (str (select-keys machine [:current-bindings :mode :selected :last-press]))))
+    (str (select-keys machine [:current-bindings :mode :selected :current-sequence]))))
 
 (defn process-input-press
   "Process key pressed and update the machine"
@@ -164,7 +167,10 @@
 (defn reset-modifiers!
   "Clear the current set of modifiers"
   [machine-atom]
-  (swap! machine-atom assoc :modifiers #{}))
+  (swap! machine-atom 
+         assoc 
+         :modifiers #{}
+         :current-sequence []))
 
 (defn create-input 
   "Prepare a new input machine, given a profile map."

@@ -57,11 +57,19 @@
   [machine state new-mode]
   (assoc machine
          :mode new-mode
-         :current-bindings (get-in machine [:bindings new-mode] {})))
+         :current-bindings (get-in machine [:bindings new-mode] {})
+         :current-sequence []))
 
 (defmacro to-mode
   [new-mode]
   `(switch-mode ~'machine ~'state ~new-mode))
+
+(defmacro notify-mode
+  "The preferred way to swap modes AND
+  echo a message explaining why."
+  [new-mode & values]
+  `(assoc (to-mode ~new-mode)
+          :last-echo ~@values))
 
 (defmacro with-machine
   "When all you have is the radar state and want to
@@ -93,19 +101,27 @@
   [machine state raw]
   (let [raw-symbol? (or (symbol? raw) (string? raw))
         command (if raw-symbol?
-                  (ns-resolve 'xradar.commands (symbol raw)))]
-    (cond 
-      ;; valid command? execute
-      command (command machine state)
-      ;; function? call it
-      (function? command) (command)
-      ;; form? insert machine/state and execute
-      (and (not raw-symbol?) (seq raw))
-      (if-let [list-cmd (ns-resolve 'xradar.commands (first raw))]
-        (apply list-cmd machine state (rest raw))
-        (doecho (str "No such command:" (first raw))))
-      ;; no such thing :(
-      :else (doecho (str "No such command:" raw)))))
+                  (ns-resolve 'xradar.commands (symbol raw)))
+        updated-machine
+        (cond 
+          ;; valid command? execute
+          command (command machine state)
+          ;; function? call it
+          (function? command) (command)
+          ;; form? insert machine/state and execute
+          (and (not raw-symbol?) (seq raw))
+          (if-let [list-cmd (ns-resolve 'xradar.commands (first raw))]
+            (apply list-cmd machine state (rest raw))
+            (notify-mode :normal
+                         (str "No such command:" (first raw))))
+          ;; no such thing :(
+          :else (notify-mode :normal
+                             (str "No such command:" raw)))]
+    ;; always clear the current sequence
+    ;;  when we evaluate a command
+    updated-machine
+    #_(assoc updated-machine
+           :current-sequence [])))
 
 ;;
 ;; Insert mode handling
@@ -246,7 +262,7 @@
     (do
       (open-flight-plan state cid)
       (to-mode :normal))
-    (doecho "You must select an aircraft to edit its flight plan")))
+    (notify-mode :normal "You must select an aircraft to edit its flight plan")))
 
 ;;
 ;; View commands
@@ -365,9 +381,10 @@
       (when-let [craft (get (:aircraft @state) cid)]
         (push-strip! network (:cid controller) craft)
         (redraw state)
-        (assoc (to-mode :strips)
-               :last-echo (str "Pushed " (:callsign craft) 
-                               " to " (:callsign controller)))))))
+        (notify-mode 
+          :strips
+          (str "Pushed " (:callsign craft) 
+               " to " (:callsign controller)))))))
 
 (defn push-current-strip
   [machine state]
@@ -399,9 +416,9 @@
   [machine state]
   (let [new-mode 
         (case (:mode machine)
-             :strips :normal
-             :strips)] 
+          :strips :normal
+          :strips)] 
     (if (and (= :strips new-mode)
              (fs/bays-empty? (:strips @state)))
-      (doecho "No flight strips")
+      (notify-mode :normal "No flight strips")
       (to-mode new-mode))))
