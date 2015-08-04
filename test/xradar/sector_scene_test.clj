@@ -2,6 +2,7 @@
   (:require [clojure
              [test :refer :all]
              [string :refer [join]]]
+            [kdtree :as kdt]
             [xradar
              [scene :refer :all]
              [sector-scene :refer :all]
@@ -22,7 +23,7 @@
   (str "#define Taxiway 14737632\n"
        "[GEO]\n"
        "N042.00.00.000 W071.00.00.000 N042.00.00.000 W071.00.00.000 Taxiway\n"
-       "N042.00.00.000 W071.00.00.000 N042.00.00.000 W071.00.00.000 255" ))
+       "N043.00.00.000 W071.00.00.000 N043.00.00.000 W071.00.00.000 255" ))
 
 (def data-labels
   (str "#define Taxiway 14737632\n"
@@ -100,10 +101,18 @@
       (is (= [{:start {:x (* -71 coord-scale) :y (* -42 coord-scale)}
                :end {:x (* -71 coord-scale) :y (* -42 coord-scale)}
                :color 0xffE0E0E0}
-              {:start {:x (* -71 coord-scale) :y (* -42 coord-scale)}
-               :end {:x (* -71 coord-scale) :y (* -42 coord-scale)}
+              {:start {:x (* -71 coord-scale) :y (* -43 coord-scale)}
+               :end {:x (* -71 coord-scale) :y (* -43 coord-scale)}
                :color 0xffFF0000}]
-             (-> data :geo)))))
+             (-> data :geo)))
+      (is (not (nil? (-> data :geo-kd))))
+      (let [kd-search 
+            (kdt/interval-search 
+              (-> data :geo-kd)
+              [[(* -71 coord-scale) (* -71 coord-scale)]
+               [(* -42 coord-scale) (* -40 coord-scale)]])
+            kd-results (map meta (set kd-search))]
+        (is (= 1 (count kd-results))))))
   (testing "[LABELS]"
     (let [data (load-data data-labels)]
       (is (= [{:label "S"

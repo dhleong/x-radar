@@ -3,6 +3,7 @@
   xradar.sector-scene
   (:require [clojure.string :refer [lower-case split]]
             [clojure.java.io :as io]
+            [kdtree :as kdt]
             [quil
              [core :as q]]
             [xradar
@@ -15,6 +16,10 @@
 (def re-spaces #"\s+")
 (def latlon-scale-plus 1)
 (def latlon-scale-minus -1)
+
+;; the lists of datas with the following
+;;  types will be indexed in a KD-tree
+(def kd-index-keys [:label :geo])
 
 ;;
 ;; Util methods
@@ -230,9 +235,36 @@
         (recur (rest lines)
                data)))))
 
+(defn- kd-index-item
+  [item]
+  (if-let [coord (:coord item)]
+    [(with-meta [(:x coord) (:y coord)] item)]
+    (let [start (:start item)
+          end (:end item)]
+      [(with-meta [(:x start) (:y start)] item)
+       (with-meta [(:x end) (:y end)] item)])))
+
+(defn- kd-index 
+  [data]
+  (loop [result data
+         kd-indexers kd-index-keys]
+    (let [data-type (first kd-indexers)
+          mapped
+          (mapcat
+            kd-index-item
+            (get result data-type))
+          mapped-key (keyword (str (name data-type) "-kd"))
+          next-result (assoc result 
+                             mapped-key 
+                             (kdt/build-tree mapped))
+          next-indexers (rest kd-indexers)]
+      (if-not (seq next-indexers)
+        next-result
+        (recur next-result next-indexers)))))
+
 (defn load-sector-data [input]
   (with-open [reader (io/reader input)]
-    (load-from-reader reader)))
+    (kd-index (load-from-reader reader))))
 
 ;;
 ;; Art utils
@@ -279,7 +311,7 @@
     (if-let [data @data-atom]
       (doseq [mode (-> profile :draw)]
         (case mode
-          :geo (draw-each data :geo draw-line)
+          :geo (draw-each data :geo-kd draw-line)
           :labels (draw-each data :labels draw-label)
           ;; else, unsupported type
           nil))))
