@@ -8,7 +8,8 @@
             [xradar
              [commands :refer [use-native-input]]
              [input :refer [create-input describe-input 
-                            process-input-press process-input-release]]
+                            process-input-press process-input-release
+                            reset-modifiers!]]
              [flight-strips :refer [create-strip-bay render-strip-bay]]
              [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork]]
@@ -208,6 +209,11 @@
         (assoc state :loaded true))
       state)))
 
+(defn on-gain-focus [state]
+  (q/redraw)
+  (reset-modifiers! (:input state))
+  state)
+
 (defn on-key-press [state event]
   (q/redraw)
   (process-input-press (:input state) (fix-esc event) (:radar-state state))
@@ -245,6 +251,7 @@
       :renderer renderer
       :size (:size profile)
       :features [:resizable]
+      :focus-gained on-gain-focus
       :key-pressed on-key-press
       :key-released on-key-release
       :middleware [qm/pause-on-error qm/fun-mode setup-params])

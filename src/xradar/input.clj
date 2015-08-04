@@ -161,6 +161,11 @@
   [machine-atom event]
   (swap! machine-atom process-release event))
 
+(defn reset-modifiers!
+  "Clear the current set of modifiers"
+  [machine-atom]
+  (swap! machine-atom assoc :modifiers #{}))
+
 (defn create-input 
   "Prepare a new input machine, given a profile map."
   [profile]
