@@ -291,15 +291,30 @@
       (q/text-align :center :center)
       (q/text (:label label) x y))))
 
+(defn- select-visible
+  [data kd-tree]
+  ;; FIXME this doesn't work...
+  (let [upper-left (map-coord data {:x -1 :y -1})
+        lower-right (map-coord data {:x (q/width) :y (q/height)})] 
+    (->> (kdt/interval-search
+           kd-tree
+           [[(:x upper-left) (:x lower-right)]
+            [(:y upper-left) (:y lower-right)]])
+         (map meta))))
+
 (defn- draw-each
   [data mode artist]
-  (doseq [element (get data mode)]
-    (try
-      (artist element)
-      (catch Exception e
-        (throw (RuntimeException. 
-                 (str "Error drawing " element " in " mode)
-                 e))))))
+  (let [base (get data mode)
+        items (if (.endsWith (name mode) "-kd")
+                (select-visible data base)
+                base)]
+    (doseq [element items]
+      (try
+        (artist element)
+        (catch Exception e
+          (throw (RuntimeException. 
+                   (str "Error drawing " element " in " mode)
+                   e)))))))
 
 ;;
 ;; Public interface
@@ -311,7 +326,8 @@
     (if-let [data @data-atom]
       (doseq [mode (-> profile :draw)]
         (case mode
-          :geo (draw-each data :geo-kd draw-line)
+          ;; TODO use :geo-kd
+          :geo (draw-each data :geo draw-line)
           :labels (draw-each data :labels draw-label)
           ;; else, unsupported type
           nil))))
