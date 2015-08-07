@@ -119,8 +119,7 @@
                              (str "No such command:" raw)))]
     ;; always clear the current sequence
     ;;  when we evaluate a command
-    updated-machine
-    #_(assoc updated-machine
+    (assoc updated-machine
            :current-sequence [])))
 
 ;;
