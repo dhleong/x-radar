@@ -17,7 +17,7 @@
 (def latlon-scale-plus 1)
 (def latlon-scale-minus -1)
 
-;; the lists of datas with the following
+;; the lists of data with the following
 ;;  types will be indexed in a KD-tree
 (def kd-index-keys [:label :geo])
 
@@ -292,10 +292,25 @@
       (q/text (:label label) x y))))
 
 (defn- select-visible
-  [data kd-tree]
-  ;; FIXME this doesn't work...
-  (let [upper-left (map-coord data {:x -1 :y -1})
-        lower-right (map-coord data {:x (q/width) :y (q/height)})] 
+  [radar data kd-tree]
+  ;; FIXME this might grab too much
+  (let [this-camera (or (:camera radar) (-> data :info :center))
+        zoom (or (:zoom radar) 220)
+        cam-x (:x this-camera)
+        cam-y (:y this-camera)
+        half-width (/ (q/width) 2)
+        half-height (/ (q/height) 2)
+        mapped-dimens (map-coord data {:x half-width :y half-height})
+        mapped-width (/ (:x mapped-dimens) zoom)
+        mapped-height (/ (:y mapped-dimens) zoom)
+        upper-left  {:x (- cam-x mapped-width) 
+                     :y (- cam-y mapped-height)}
+        lower-right  {:x (+ cam-x mapped-width) 
+                      :y (+ cam-y mapped-height)}] 
+    ;; (def sel-range [mapped-width mapped-height])
+    ;; (def compare-it [upper-left lower-right this-camera])
+    ;; (def center [(q/screen-x (:x upper-left) (:y upper-left))
+    ;;              (q/screen-y (:x upper-left) (:y upper-left))])
     (->> (kdt/interval-search
            kd-tree
            [[(:x upper-left) (:x lower-right)]
@@ -303,10 +318,10 @@
          (map meta))))
 
 (defn- draw-each
-  [data mode artist]
+  [radar data mode artist]
   (let [base (get data mode)
         items (if (.endsWith (name mode) "-kd")
-                (select-visible data base)
+                (select-visible radar data base)
                 base)]
     (doseq [element items]
       (try
@@ -316,21 +331,28 @@
                    (str "Error drawing " element " in " mode)
                    e)))))))
 
+(defn- do-draw-scene
+  "Separated out for easier updating in repl"
+  [radar data profile]
+  (let [start (System/currentTimeMillis)]
+   (doseq [mode (-> profile :draw)]
+     (case mode
+       ;; TODO use :geo-kd
+       :geo (draw-each radar data :geo draw-line)
+       :labels (draw-each radar data :labels draw-label)
+       ;; else, unsupported type
+       nil))
+   (def last-draw-time (- (System/currentTimeMillis) start))))
+
 ;;
 ;; Public interface
 ;;
 
 (deftype SectorScene [data-atom]
   XScene
-  (draw-scene [this profile]
+  (draw-scene [this radar profile]
     (if-let [data @data-atom]
-      (doseq [mode (-> profile :draw)]
-        (case mode
-          ;; TODO use :geo-kd
-          :geo (draw-each data :geo draw-line)
-          :labels (draw-each data :labels draw-label)
-          ;; else, unsupported type
-          nil))))
+      (do-draw-scene radar data profile)))
   (get-center [this]
     (when-let [info (-> @data-atom :info)]
       (-> info :center)))

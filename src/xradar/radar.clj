@@ -120,13 +120,14 @@
     (q/text-mode :shape)
     (q/hint :enable-depth-test)
     (when scene-loaded
+      (def last-used-camera this-camera)
       (let [{:keys [x y]} this-camera]
         (q/begin-camera)
         (q/camera x y this-zoom
                   x y 0
                   0 1 0)
         (q/end-camera))
-      (draw-scene scene profile))
+      (draw-scene scene radar profile))
     (if (not scene-loaded)
       (q/text "Loading..." 20 20))
     (let [radar-state (assoc radar :mode input-mode)]

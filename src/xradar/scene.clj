@@ -6,9 +6,11 @@
   "Represents scenery, usually backed by
   a file"
   (draw-scene
-    [this profile]
+    [this radar profile]
     "Draw the elements of the scene as specified
-    by the `:draw` list in the `:profile`")
+    by the `:draw` list in the `:profile`. The
+    radar object (NOT the atom) is also supplied,
+    if you need something from it")
   (get-center
     [this]
     "Get the center coordinate as {:x, :y}
