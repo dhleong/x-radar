@@ -21,7 +21,7 @@
              [sector-scene :refer [load-sector parse-coord]]
              [selection-mode :refer [render-selections]]
              [util :refer [deep-merge]]]
-            [xradar.modes.xradar-mode :refer [create-mode]]))
+            [xradar.modes.ground-mode :refer [create-mode]]))
 
 ;;
 ;; Constants
@@ -133,7 +133,7 @@
       (doseq [[cid craft] aircraft]
         (let [updated-craft
               (if (= selected (:cid craft))
-                (assoc craft :state :selected)
+                (assoc craft :selected true)
                 craft)]
           (m/draw-aircraft mode radar-state scheme updated-craft))))
     ;; reset camera mode for UI
@@ -270,6 +270,14 @@
    :depart "KLGA" :arrive "KBOS" :alternate ""
    :cruise "FL310" :route "MERIT ROBUC3" 
    :scratch "" :squawk ""
+   :squawking (case cid
+                2 "2500"
+                3 "1200"
+                4 "0000")
+   :squawking-mode (case cid
+                     2 :normal
+                     3 :normal
+                     4 :standby)
    :remarks "/v/" :rules :ifr})
 
 (defn- add-aircraft
