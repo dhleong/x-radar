@@ -10,7 +10,7 @@
 (defmulti my-aircraft (fn [scheme craft] (:state craft :untracked)))
 (defmethod my-aircraft :default [scheme craft]
   (q/ellipse-mode :center)
-  (q/ellipse (:x craft) (:y craft) craft-width craft-height))
+  (q/ellipse 0 0 craft-width craft-height))
 
 (defn- do-draw-aircraft [radar scheme craft]
   (let [state (:state craft :untracked)
@@ -20,18 +20,25 @@
           mapping (if (= :select-aircraft (:mode radar))
                     (get-in radar [:craft-bindings (:cid craft)] nil))]
       (case state
-        :selected (q/stroke-weight 1.5)
+        :selected (q/stroke-weight 2)
         ;; default
-        (q/stroke-weight 0.5))
+        (q/stroke-weight 1))
       (q/no-fill)
       (q/stroke-int craft-color)
+      (let [cx (:x craft)
+            cy (:y craft)
+            x (q/screen-x cx cy 0)
+            y (q/screen-y cx cy 0)]
+        (q/push-matrix)
+        (q/camera)
+        (q/translate x y))
       (my-aircraft scheme craft)
-      (q/fill-int craft-color)
       (when mapping
         (q/fill-int craft-color)
         (q/text-size 14)
         (q/text-align :right :center)
-        (q/text (str mapping) (- (:x craft) 10) (:y craft)))))
+        (q/text (str mapping) (- 10) 0))
+      (q/pop-matrix)))
 
 (deftype XRadarMode []
   RadarMode
