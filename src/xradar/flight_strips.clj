@@ -78,6 +78,7 @@
       (q/stroke-int (-> scheme :strips :border)))
     (with-alpha q/fill-int background)
     (q/stroke-weight strip-border)
+    (q/rect-mode :corner)
     (q/rect 0 0 strip-width strip-height)
     (q/stroke-weight strip-lines)
     (q/line col1-width 0 col1-width strip-height)
@@ -133,7 +134,6 @@
             (+ half-padding (* 4 text-size)))
     ;; column 4 (route/remarks)
     (q/translate col2-width 0)
-    (q/rect-mode :corner)
     (q/text (str (:route craft))
             0 half-padding
             route-width (* 3 text-size))
@@ -148,6 +148,7 @@
     (q/stroke-int (-> scheme :strips :border)))
   (with-alpha q/fill-int (-> scheme :strips :separator :background))
   (q/stroke-weight strip-border)
+  (q/rect-mode :corner)
   (q/rect 0 0 strip-width strip-height)
   (q/text-size separator-text-size)
   (q/text-align :center)
