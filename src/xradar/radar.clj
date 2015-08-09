@@ -30,7 +30,7 @@
 (def default-location [20 20])
 (def default-size [800 800])
 (def default-zoom 220)
-(def fps 7)
+(def fps 30)
 (def renderer :opengl)
 
 ;; NB we disable looping and just redraw
