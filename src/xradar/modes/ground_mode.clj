@@ -54,6 +54,13 @@
     (q/text (create-line2 craft) 0 0)))
 
 (defmulti my-aircraft (fn [scheme craft] (:state craft :untracked)))
+(defmethod my-aircraft :tracked [scheme craft]
+  ;; draw first, because we may clear the fill
+  ;;  below to draw certain shapes
+  (draw-info-box scheme craft)
+  (q/text-align :center :center)
+  (q/text-size 14)
+  (q/text (:tracked-by craft) 0 (* -0.18 (q/text-ascent))))
 (defmethod my-aircraft :untracked [scheme craft]
   ;; draw first, because we may clear the fill
   ;;  below to draw certain shapes

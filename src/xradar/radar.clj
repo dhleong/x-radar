@@ -278,6 +278,7 @@
                      2 :normal
                      3 :normal
                      4 :standby)
+   :tracked-by nil ;; eg "A"
    :remarks "/v/" :rules :ifr})
 
 (defn- add-aircraft
