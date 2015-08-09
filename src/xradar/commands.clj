@@ -17,7 +17,7 @@
              [scene :refer [find-point]]
              [selection :refer [to-bindings from-bindings]]
              [selection-mode :as sm]
-             [util :refer [in-bounds]]]))
+             [util :refer [deep-merge in-bounds]]]))
 
 ;;
 ;; Constants
@@ -30,9 +30,12 @@
 (def move-distance 10)
 (def zoom-distance 50)
 
+(def submits 0)
+
 (defn- default-input-submit
-  [state message]
+  [machine state message]
   (try
+    (def submits (inc submits))
     (let [network (:network @state)] 
       (if-let [selected (:selected @state)]
         (let [craft (get (:aircraft @state) selected {:callsign selected})]
@@ -130,9 +133,11 @@
   "Start insert mode to get some text input from the user.
   Optionally you can provide a textual `prompt`, and a 
   handler to be fired `on-submit`. 
-  `on-submit` should be a (fn [state value]) where `state` 
-  is the usual radar state atom, and `value` is the string
-  value provided by the user.
+  `on-submit` should be a (fn [machine state value]) 
+  where `machine` and `state` are the usual command args,
+  and `value` is the string value provided by the user.
+  If an updated machine is not provided, we will perform
+  a switch into :normal mode
   `cancel-mode` should be the keyword for a mode to return
   to on cancel. If not provided, defaults to `:normal`"
   [machine state & {:keys [prompt on-submit cancel-mode]}]
@@ -161,12 +166,13 @@
                :prompt my-prompt
                :on-cancel #(with-machine (to-mode (or cancel-mode :normal)))
                :on-submit 
-               #(with-machine
-                  (let [new-machine (submit-handler machine state %)]
-                    (redraw state)
-                    (if (:mode new-machine)
-                     new-machine
-                     (-> (to-mode :normal))))))))
+               #(let [result (submit-handler machine state %)
+                      new-machine
+                      (if (:mode result)
+                        result
+                        (-> (to-mode :normal)))]
+                  (with-machine (deep-merge machine new-machine))
+                  (redraw state)))))
     ;; just the unfinished, custom input handling
     (to-mode :insert)))
 
