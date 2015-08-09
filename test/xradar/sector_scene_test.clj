@@ -24,6 +24,13 @@
        "N042.00.00.000 W071.00.00.000 N042.00.00.000 W071.00.00.000 Taxiway\n"
        "N042.00.00.000 W071.00.00.000 N042.00.00.000 W071.00.00.000 255" ))
 
+(def data-shape
+  (str "#define Taxiway 14737632\n"
+       "[GEO]\n"
+       "N042.00.00.000 W071.00.00.000 N043.00.00.000 W072.00.00.000 Taxiway\n"
+       "N043.00.00.000 W072.00.00.000 N044.00.00.000 W072.00.00.000 Taxiway" ))
+
+
 (def data-labels
   (str "#define Taxiway 14737632\n"
        "[LABELS]\n"
@@ -65,8 +72,7 @@
                         "S042.00.00.000"
                         "E042.00.00.000"))))
   (testing "parse-coord with scale"
-    (let [scene (load-sector-data
-                  (StringReader. data-info))]
+    (let [scene (load-data data-info)]
       ;; be lazy and hope we mapped correctly
       (is (not= {:x 42 :y 42} 
                 (parse-coord scene 
@@ -113,6 +119,31 @@
                :coord {:x (* -71 coord-scale) :y (* -42 coord-scale)}
                :color 0xffFF0000}]
              (-> data :labels))))))
+
+(deftest shapes-test
+  (testing "Single shape shapes"
+    (let [data (load-data data-geo)]
+      (is (= [[{:x (* -71 coord-scale) :y (* -42 coord-scale)}
+               {:x (* -71 coord-scale) :y (* -42 coord-scale)}]
+              [{:x (* -71 coord-scale) :y (* -42 coord-scale)}
+               {:x (* -71 coord-scale) :y (* -42 coord-scale)}]]
+             (-> data :geo-shapes)))
+      (is (= 0xffE0E0E0
+             (-> data :geo-shapes first meta :color)))
+      (is (= 0xffFF0000
+             (-> data :geo-shapes second meta :color)))))
+  (testing "Multi-item shapes"
+    (let [data (load-data data-shape)]
+      (is (= [[{:x (* -71 coord-scale) :y (* -42 coord-scale)}
+               {:x (* -72 coord-scale) :y (* -43 coord-scale)}
+               {:x (* -72 coord-scale) :y (* -44 coord-scale)}]]
+             (-> data :geo-shapes)))
+      (is (= {:color 0xffE0E0E0
+              :bounds [(* -72 coord-scale)   ; left (min-x)
+                       (* -44 coord-scale)   ; top (min-y)
+                       (* -71 coord-scale)   ; right (max-x)
+                       (* -42 coord-scale)]} ; bottom (max-y)
+             (-> data :geo-shapes first meta))))))
 
 (deftest methods-test
   (testing "find-point"

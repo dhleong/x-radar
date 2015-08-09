@@ -230,9 +230,81 @@
         (recur (rest lines)
                data)))))
 
+(defn- with-bounds
+  [shape]
+  (if (empty? shape)
+    shape
+    (loop [points shape
+           last-min-x Long/MAX_VALUE
+           last-min-y Long/MAX_VALUE
+           last-max-x Long/MIN_VALUE
+           last-max-y Long/MIN_VALUE]
+      (let [next-points (rest points)
+            this-point (first points)
+            this-x (:x this-point)
+            this-y (:y this-point)
+            ;; update bounds
+            new-min-x (min last-min-x this-x)
+            new-min-y (min last-min-y this-y)
+            new-max-x (max last-max-x this-x)
+            new-max-y (max last-max-y this-y)]
+        (if (empty? next-points)
+          ;; we've seen it all! update the bounds
+          (vary-meta shape 
+                     assoc 
+                     ;; ie: left, top, right, bottom
+                     :bounds [new-min-x new-min-y 
+                              new-max-x new-max-y])
+          ;; keep looking
+          (recur next-points
+                 new-min-x new-min-y
+                 new-max-x new-max-y))))))
+
+(defn- parse-shapes
+  [data]
+  (if-let [geo-data (:geo data)]
+    (loop [geo geo-data
+           shapes []
+           iterations 1
+           this-shape []]
+      (let [last-coord (last this-shape)
+            last-meta (meta this-shape)
+            last-color (:color last-meta)
+            last-x (:x last-coord)
+            last-y (:y last-coord)
+            next-geos (rest geo)
+            next-line (first geo)
+            next-color (:color next-line)
+            next-x (:x (:start next-line))
+            next-y (:y (:start next-line))
+            ;; do we continue the previous shape?
+            shape-continues?
+            (and (= next-x last-x)
+                 (= next-y last-y)
+                 (= next-color last-color))
+            next-shapes
+            (if shape-continues?
+              shapes ;; no change yet
+              (if (empty? this-shape)
+                shapes ;; begin first shape ever
+                (conj shapes 
+                      (with-bounds this-shape)))) ;; append the new shape
+            next-shape
+            (if shape-continues?
+              (conj this-shape (:end next-line)) ;; append next coord
+              (with-meta [(:start next-line)
+                          (:end next-line)]
+                         {:color next-color}))]
+        (if (empty? next-geos)
+          (assoc data :geo-shapes (conj next-shapes 
+                                        (with-bounds next-shape)))
+          (recur next-geos next-shapes (inc iterations) next-shape))))
+    ;; no geo data; don't do anything
+    data))
+
 (defn load-sector-data [input]
   (with-open [reader (io/reader input)]
-    (load-from-reader reader)))
+    (parse-shapes (load-from-reader reader))))
 
 ;;
 ;; Art utils
@@ -242,9 +314,9 @@
   [line]
   (let 
     [x1 (:x (:start line))
-        y1 (:y (:start line))
-        x2 (:x (:end line))
-        y2 (:y (:end line))]
+     y1 (:y (:start line))
+     x2 (:x (:end line))
+     y2 (:y (:end line))]
     (when (or (in-bounds x1 y1) (in-bounds x2 y2))
       (q/stroke-int (:color line))
       (q/stroke-weight 1)
@@ -259,15 +331,47 @@
       (q/text-align :center :center)
       (q/text (:label label) x y))))
 
+(defn- draw-shape
+  [shape]
+  (let [data (meta shape)
+        color (:color data)
+        [l t r b] (:bounds data)]
+    (when (or (in-bounds l t)
+              (in-bounds r t)
+              (in-bounds l b)
+              (in-bounds r b)
+              (in-bounds (/ (- r l) 2) 
+                         (/ (- b t) 2)))
+      (q/no-fill)
+      (q/stroke-int color)
+      (q/stroke-weight 1)
+      (q/begin-shape)
+      (doseq [vertex shape]
+        (q/vertex (:x vertex) (:y vertex)))
+      (q/end-shape))))
+
 (defn- draw-each
   [data mode artist]
   (doseq [element (get data mode)]
     (try
       (artist element)
       (catch Exception e
+        (def last-exc e)
         (throw (RuntimeException. 
-                 (str "Error drawing " element " in " mode)
+                 (str "Error drawing " mode ": " element)
                  e))))))
+
+(defn- do-draw-scene
+  "Separate for easier tweaking in repl"
+  [data profile]
+  (let [start (System/currentTimeMillis)]
+    (doseq [mode (-> profile :draw)]
+      (case mode
+        :geo (draw-each data :geo-shapes draw-shape)
+        :labels (draw-each data :labels draw-label)
+        ;; else, unsupported type
+        nil))
+    (def duration (- (System/currentTimeMillis) start))))
 
 ;;
 ;; Public interface
@@ -277,12 +381,7 @@
   XScene
   (draw-scene [this profile]
     (if-let [data @data-atom]
-      (doseq [mode (-> profile :draw)]
-        (case mode
-          :geo (draw-each data :geo draw-line)
-          :labels (draw-each data :labels draw-label)
-          ;; else, unsupported type
-          nil))))
+      (do-draw-scene data profile)))
   (get-center [this]
     (when-let [info (-> @data-atom :info)]
       (-> info :center)))
