@@ -132,8 +132,10 @@
   handler to be fired `on-submit`. 
   `on-submit` should be a (fn [state value]) where `state` 
   is the usual radar state atom, and `value` is the string
-  value provided by the user."
-  [machine state & {:keys [prompt on-submit]}]
+  value provided by the user.
+  `cancel-mode` should be the keyword for a mode to return
+  to on cancel. If not provided, defaults to `:normal`"
+  [machine state & {:keys [prompt on-submit cancel-mode]}]
   (if use-native-input
     ;; build our input dialog
     (let [{:keys [x y]} (get-location state)
@@ -157,7 +159,7 @@
                (+ y (q/height) (- input-height)) 
                (q/width)
                :prompt my-prompt
-               :on-cancel #(with-machine (to-mode :normal))
+               :on-cancel #(with-machine (to-mode (or cancel-mode :normal)))
                :on-submit 
                #(with-machine
                   (let [new-machine (submit-handler machine state %)]
@@ -343,6 +345,7 @@
   ([machine state]
    (start-insert machine state 
                  :prompt "Separator label:"
+                 :cancel-mode :strips
                  :on-submit add-strip-separator))
   ([machine state label]
    (fs/add-separator (:strips @state) label)
