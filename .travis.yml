@@ -1,2 +1,5 @@
 language: clojure
+install:
+    - mv project.clj project.clj.bak
+    - cat project.clj | sed 's/"-Xdock.*"//' > project.clj
 
