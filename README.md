@@ -1,4 +1,4 @@
-# xRadar
+# xRadar [![Build Status](http://img.shields.io/travis/dhleong/x-radar.svg?style=flat)](https://travis-ci.org/dhleong/x-radar)
 
 A cross-platform, open source radar client for the 
 [Vatsim](http://www.vatsim.net) network.
