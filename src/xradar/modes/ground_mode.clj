@@ -1,7 +1,8 @@
 (ns ^{:author "Daniel Leong"
       :doc "'Ground' Radar Mode implementation"}
   xradar.modes.ground-mode
-  (:require [quil.core :as q]
+  (:require [clojure.string :refer [lower-case]]
+            [quil.core :as q]
             [xradar.mode :refer :all]
             [xradar.modes.mode-util :refer [do-draw-aircraft]]))
 
@@ -15,10 +16,13 @@
 
 (defn create-line1
   [craft]
-  (let [sign (:callsign craft)]
-    ;; TODO check for voice-only, receive, text
-    ;;  and mark it up
-    sign))
+  (let [sign (:callsign craft)
+        remarks (lower-case (:remarks craft))]
+    (cond
+      (.contains remarks "/v") (str sign "/v")
+      (.contains remarks "/r") (str sign "/r")
+      (.contains remarks "/t") (str sign "/t")
+      :else sign)))
 
 (defn create-line2
   [craft]
@@ -26,11 +30,15 @@
                   (take 4)
                   (apply str))]
     (cond
-      (= :vfr (:rules craft))
-      base
+      ;; squawking vfr
+      (= :vfr (:rules craft)) base
+      ;; squawking incorrect code
       (and (= :normal (:squawking-mode craft))
            (not= (:squawk craft) (:squawking craft)))
       (str base " !" (.substring (:squawking craft) 0 2))
+      ;; ground-speed, if available
+      (number? (:ground-speed craft))
+      (str base " " (:ground-speed craft))
       :else base)))
 
 (defmulti draw-info-box (fn [scheme craft] (:state craft :untracked)))

@@ -9,6 +9,10 @@
 (def mapping-text-size 14)
 
 (defn do-draw-aircraft
+  "Helper for rendering an aircraft. Translates so the
+  origin (0, 0) is on the center of the aircraft, and
+  sets the fill and stroke colors to the correct color.
+  Also handles drawing the mapping characters for selection."
   [radar scheme my-aircraft craft]
   (let [state (:state craft :untracked)
         craft-color (if (:selected craft)
