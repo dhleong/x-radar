@@ -117,7 +117,7 @@
     (q/text (str (:cruise craft)) 
             0
             (* 3 large-row-height))
-    ;; column 2
+    ;; column 3
     (q/translate col2-width 0)
     (q/text (str (:depart craft)) 
             0
@@ -131,8 +131,9 @@
     (q/text (str (:scratch craft)) 
             0
             (+ half-padding (* 4 text-size)))
-    ;; column 3 (route/remarks)
+    ;; column 4 (route/remarks)
     (q/translate col2-width 0)
+    (q/rect-mode :corner)
     (q/text (str (:route craft))
             0 half-padding
             route-width (* 3 text-size))
