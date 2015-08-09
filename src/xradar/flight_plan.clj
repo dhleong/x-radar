@@ -44,7 +44,8 @@
   (let [frame (s/to-frame e)]
     (amend-plan state cid (s/value frame))))
 
-(def close-action 
+(defn close-action 
+  []
   (s/action 
     :name "Close"
     :handler (fn [e] (.dispose (s/to-frame e)))
@@ -80,7 +81,7 @@
           :menubar
           (s/menubar 
             :items [(s/menu :text "File" 
-                            :items [close-action 
+                            :items [(close-action) 
                                     :separator
                                     (save-action state cid)
                                     (save-and-close-action state cid)])])
