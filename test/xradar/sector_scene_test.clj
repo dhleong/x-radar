@@ -72,8 +72,7 @@
                         "S042.00.00.000"
                         "E042.00.00.000"))))
   (testing "parse-coord with scale"
-    (let [scene (load-sector-data
-                  (StringReader. data-info))]
+    (let [scene (load-data data-info)]
       ;; be lazy and hope we mapped correctly
       (is (not= {:x 42 :y 42} 
                 (parse-coord scene 
@@ -129,16 +128,21 @@
               [{:x (* -71 coord-scale) :y (* -42 coord-scale)}
                {:x (* -71 coord-scale) :y (* -42 coord-scale)}]]
              (-> data :geo-shapes)))
-      (is (= {:color 0xffE0E0E0}
-             (-> data :geo-shapes first meta)))
-      (is (= {:color 0xffFF0000}
-             (-> data :geo-shapes second meta))))
+      (is (= 0xffE0E0E0
+             (-> data :geo-shapes first meta :color)))
+      (is (= 0xffFF0000
+             (-> data :geo-shapes second meta :color)))))
+  (testing "Multi-item shapes"
     (let [data (load-data data-shape)]
       (is (= [[{:x (* -71 coord-scale) :y (* -42 coord-scale)}
                {:x (* -72 coord-scale) :y (* -43 coord-scale)}
                {:x (* -72 coord-scale) :y (* -44 coord-scale)}]]
              (-> data :geo-shapes)))
-      (is (= {:color 0xffE0E0E0}
+      (is (= {:color 0xffE0E0E0
+              :bounds [(* -72 coord-scale)   ; left (min-x)
+                       (* -44 coord-scale)   ; top (min-y)
+                       (* -71 coord-scale)   ; right (max-x)
+                       (* -42 coord-scale)]} ; bottom (max-y)
              (-> data :geo-shapes first meta))))))
 
 (deftest methods-test

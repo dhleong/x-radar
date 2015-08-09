@@ -230,41 +230,77 @@
         (recur (rest lines)
                data)))))
 
+(defn- with-bounds
+  [shape]
+  (if (empty? shape)
+    shape
+    (loop [points shape
+           last-min-x Long/MAX_VALUE
+           last-min-y Long/MAX_VALUE
+           last-max-x Long/MIN_VALUE
+           last-max-y Long/MIN_VALUE]
+      (let [next-points (rest points)
+            this-point (first points)
+            this-x (:x this-point)
+            this-y (:y this-point)
+            ;; update bounds
+            new-min-x (min last-min-x this-x)
+            new-min-y (min last-min-y this-y)
+            new-max-x (max last-max-x this-x)
+            new-max-y (max last-max-y this-y)]
+        (if (empty? next-points)
+          ;; we've seen it all! update the bounds
+          (vary-meta shape 
+                     assoc 
+                     ;; ie: left, top, right, bottom
+                     :bounds [new-min-x new-min-y 
+                              new-max-x new-max-y])
+          ;; keep looking
+          (recur next-points
+                 new-min-x new-min-y
+                 new-max-x new-max-y))))))
+
 (defn- parse-shapes
   [data]
-  (loop [geo (:geo data)
-         shapes []
-         iterations 1
-         this-shape []]
-    (let [last-coord (last this-shape)
-          last-color (:color (meta this-shape))
-          last-x (:x last-coord)
-          last-y (:y last-coord)
-          next-geos (rest geo)
-          next-line (first geo)
-          next-color (:color next-line)
-          next-x (:x (:start next-line))
-          next-y (:y (:start next-line))
-          ;; do we continue the previous shape?
-          shape-continues?
-          (and (= next-x last-x)
-               (= next-y last-y)
-               (= next-color last-color))
-          next-shapes
-          (if shape-continues?
-            shapes ;; no change yet
-            (if (empty? this-shape)
-              shapes ;; begin first shape ever
-              (conj shapes this-shape))) ;; append the new shape
-          next-shape
-          (if shape-continues?
-            (conj this-shape (:end next-line)) ;; append next coord
-            (with-meta [(:start next-line)
-                        (:end next-line)]
-                       {:color next-color}))]
-      (if (empty? next-geos)
-        (assoc data :geo-shapes (conj next-shapes next-shape))
-        (recur next-geos next-shapes (inc iterations) next-shape)))))
+  (if-let [geo-data (:geo data)]
+    (loop [geo geo-data
+           shapes []
+           iterations 1
+           this-shape []]
+      (let [last-coord (last this-shape)
+            last-meta (meta this-shape)
+            last-color (:color last-meta)
+            last-x (:x last-coord)
+            last-y (:y last-coord)
+            next-geos (rest geo)
+            next-line (first geo)
+            next-color (:color next-line)
+            next-x (:x (:start next-line))
+            next-y (:y (:start next-line))
+            ;; do we continue the previous shape?
+            shape-continues?
+            (and (= next-x last-x)
+                 (= next-y last-y)
+                 (= next-color last-color))
+            next-shapes
+            (if shape-continues?
+              shapes ;; no change yet
+              (if (empty? this-shape)
+                shapes ;; begin first shape ever
+                (conj shapes 
+                      (with-bounds this-shape)))) ;; append the new shape
+            next-shape
+            (if shape-continues?
+              (conj this-shape (:end next-line)) ;; append next coord
+              (with-meta [(:start next-line)
+                          (:end next-line)]
+                         {:color next-color}))]
+        (if (empty? next-geos)
+          (assoc data :geo-shapes (conj next-shapes 
+                                        (with-bounds next-shape)))
+          (recur next-geos next-shapes (inc iterations) next-shape))))
+    ;; no geo data; don't do anything
+    data))
 
 (defn load-sector-data [input]
   (with-open [reader (io/reader input)]
