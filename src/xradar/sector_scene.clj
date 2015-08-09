@@ -230,9 +230,45 @@
         (recur (rest lines)
                data)))))
 
+(defn- parse-shapes
+  [data]
+  (loop [geo (:geo data)
+         shapes []
+         iterations 1
+         this-shape []]
+    (let [last-coord (last this-shape)
+          last-color (:color (meta this-shape))
+          last-x (:x last-coord)
+          last-y (:y last-coord)
+          next-geos (rest geo)
+          next-line (first geo)
+          next-color (:color next-line)
+          next-x (:x (:start next-line))
+          next-y (:y (:start next-line))
+          ;; do we continue the previous shape?
+          shape-continues?
+          (and (= next-x last-x)
+               (= next-y last-y)
+               (= next-color last-color))
+          next-shapes
+          (if shape-continues?
+            shapes ;; no change yet
+            (if (empty? this-shape)
+              shapes ;; begin first shape ever
+              (conj shapes this-shape))) ;; append the new shape
+          next-shape
+          (if shape-continues?
+            (conj this-shape (:end next-line)) ;; append next coord
+            (with-meta [(:start next-line)
+                        (:end next-line)]
+                       {:color next-color}))]
+      (if (empty? next-geos)
+        (assoc data :geo-shapes (conj next-shapes next-shape))
+        (recur next-geos next-shapes (inc iterations) next-shape)))))
+
 (defn load-sector-data [input]
   (with-open [reader (io/reader input)]
-    (load-from-reader reader)))
+    (parse-shapes (load-from-reader reader))))
 
 ;;
 ;; Art utils
@@ -242,9 +278,9 @@
   [line]
   (let 
     [x1 (:x (:start line))
-        y1 (:y (:start line))
-        x2 (:x (:end line))
-        y2 (:y (:end line))]
+     y1 (:y (:start line))
+     x2 (:x (:end line))
+     y2 (:y (:end line))]
     (when (or (in-bounds x1 y1) (in-bounds x2 y2))
       (q/stroke-int (:color line))
       (q/stroke-weight 1)

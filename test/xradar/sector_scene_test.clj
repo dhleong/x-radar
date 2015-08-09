@@ -24,6 +24,13 @@
        "N042.00.00.000 W071.00.00.000 N042.00.00.000 W071.00.00.000 Taxiway\n"
        "N042.00.00.000 W071.00.00.000 N042.00.00.000 W071.00.00.000 255" ))
 
+(def data-shape
+  (str "#define Taxiway 14737632\n"
+       "[GEO]\n"
+       "N042.00.00.000 W071.00.00.000 N043.00.00.000 W072.00.00.000 Taxiway\n"
+       "N043.00.00.000 W072.00.00.000 N044.00.00.000 W072.00.00.000 Taxiway" ))
+
+
 (def data-labels
   (str "#define Taxiway 14737632\n"
        "[LABELS]\n"
@@ -113,6 +120,26 @@
                :coord {:x (* -71 coord-scale) :y (* -42 coord-scale)}
                :color 0xffFF0000}]
              (-> data :labels))))))
+
+(deftest shapes-test
+  (testing "Single shape shapes"
+    (let [data (load-data data-geo)]
+      (is (= [[{:x (* -71 coord-scale) :y (* -42 coord-scale)}
+               {:x (* -71 coord-scale) :y (* -42 coord-scale)}]
+              [{:x (* -71 coord-scale) :y (* -42 coord-scale)}
+               {:x (* -71 coord-scale) :y (* -42 coord-scale)}]]
+             (-> data :geo-shapes)))
+      (is (= {:color 0xffE0E0E0}
+             (-> data :geo-shapes first meta)))
+      (is (= {:color 0xffFF0000}
+             (-> data :geo-shapes second meta))))
+    (let [data (load-data data-shape)]
+      (is (= [[{:x (* -71 coord-scale) :y (* -42 coord-scale)}
+               {:x (* -72 coord-scale) :y (* -43 coord-scale)}
+               {:x (* -72 coord-scale) :y (* -44 coord-scale)}]]
+             (-> data :geo-shapes)))
+      (is (= {:color 0xffE0E0E0}
+             (-> data :geo-shapes first meta))))))
 
 (deftest methods-test
   (testing "find-point"
