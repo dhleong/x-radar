@@ -308,6 +308,9 @@
         (reify XRadarNetwork
           (get-controllers [this]
             (make-controllers))
+          (get-servers [this]
+            {"USA-E" {:ip "97.107.135.245"}
+             "USA-W" {:ip "50.116.3.203"}})
           (push-strip! [this cid strip]
             ;; just ignore
             nil)

@@ -9,6 +9,12 @@
     "Return a list of online controllers. Each
     is a map that looks like:
     {:cid <id> :callsign \"LGA_TWR\"}")
+  (get-servers
+    [this]
+    "Return a map of ServerName->Info, where
+    Info is itself a map containing:
+    {:ip 'IP address'
+     :location 'New York, USA'}")
   (push-strip!
     [this controller-id aircraft]
     "Push a flight strip to the controller with
