@@ -33,18 +33,15 @@
                    :rating :cid :pass :server :label])
 (def text-value-fields [:callsign :name :cid :pass :label])
 
-;; (defn- update-buttons
-;;   [e]
-;;   (let [root (s/to-root e)
-;;         values (s/value root)
-;;         all-set? (every? (complement empty?)
-;;                          (vals values))
-;;         enabled all-set?]
-;;     (s/)))
+(defn- connect-action
+  [callback]
+  (fn [e]
+    (callback (s/value (s/to-root e)))
+    (.dispose (s/to-root e))))
 
 (defn open-connection
   "Open the connection config window"
-  [state]
+  [state callback]
   (let [network (:network @state)
         servers-map (get-servers network)
         frame 
@@ -101,5 +98,9 @@
                #(s/select frame [%]))))
       (b/transform #(every? (complement empty?) %))
       (b/property (s/select frame [:#connect]) :enabled?))
+    ;; attach listeners
+    (s/listen (s/select frame [:#connect])
+              :action (connect-action callback))
     (def last-frame frame)
     (-> frame s/pack! s/show!)))
+
