@@ -4,6 +4,17 @@
 
 (defprotocol XRadarNetwork
   "Protocol for network actions"
+  (connect!
+    [this & {:keys [on-connect on-fail
+                    callsign real-name
+                    facility rating
+                    cid pass
+                    server]}]
+    "Request a connection to the network using
+    the given parameters.")
+  (disconnect!
+    [this]
+    "Sever any active connection with the network.")
   (get-controllers
     [this]
     "Return a list of online controllers. Each
@@ -15,6 +26,10 @@
     Info is itself a map containing:
     {:ip 'IP address'
      :location 'New York, USA'}")
+  (is-connected?
+    [this]
+    "Returns true if we have an active connection 
+    to the network.")
   (push-strip!
     [this controller-id aircraft]
     "Push a flight strip to the controller with

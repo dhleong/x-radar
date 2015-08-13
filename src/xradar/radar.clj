@@ -299,6 +299,7 @@
    {:cid 113 :callsign "LGA_TWR"}])
 
 (defn- testing []
+  (def radar-connected (atom false))
   (def radar 
     (create-radar 
       {:debug true}
@@ -306,11 +307,22 @@
         "/Users/dhleong/VRC/Support/ZNY.sct2"
         #(add-aircraft radar))
         (reify XRadarNetwork
+          (disconnect! [this]
+            (swap! radar-connected (constantly false)))
+          (connect! [this & {:keys [on-connect on-fail
+                                    callsign real-name
+                                    facility rating
+                                    cid pass
+                                    server]}]
+            (swap! radar-connected (constantly true))
+            (on-connect))
           (get-controllers [this]
             (make-controllers))
           (get-servers [this]
             {"USA-E" {:ip "97.107.135.245"}
              "USA-W" {:ip "50.116.3.203"}})
+          (is-connected? [this]
+            @radar-connected)
           (push-strip! [this cid strip]
             ;; just ignore
             nil)
