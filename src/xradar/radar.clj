@@ -307,8 +307,8 @@
         "/Users/dhleong/VRC/Support/ZNY.sct2"
         #(add-aircraft radar))
         (reify XRadarNetwork
-          (disconnect! [this]
-            (swap! radar-connected (constantly false)))
+          (connected? [this]
+            @radar-connected)
           (connect! [this & {:keys [on-connect on-fail
                                     callsign real-name
                                     facility rating
@@ -316,13 +316,13 @@
                                     server]}]
             (swap! radar-connected (constantly true))
             (on-connect))
+          (disconnect! [this]
+            (swap! radar-connected (constantly false)))
           (get-controllers [this]
             (make-controllers))
           (get-servers [this]
             {"USA-E" {:ip "97.107.135.245"}
              "USA-W" {:ip "50.116.3.203"}})
-          (is-connected? [this]
-            @radar-connected)
           (push-strip! [this cid strip]
             ;; just ignore
             nil)

@@ -8,10 +8,11 @@
   (:require [clojure.test :refer [function?]]
             [quil.core :as q]
             [xradar
+             [connection-config :refer [open-connection]]
              [flight-plan :refer [open-flight-plan]]
              [flight-strips :as fs]
              [native-insert :refer [create-insert input-height]]
-             [network :refer [get-controllers push-strip! send! send-to!]]
+             [network :refer [connect! connected? get-controllers push-strip! send! send-to!]]
              [output :refer [append-output]]
              [radar-util :refer [get-location redraw]]
              [scene :refer [find-point]]
@@ -271,6 +272,22 @@
       (to-mode :normal))
     (notify-mode :normal "You must select an aircraft to edit its flight plan")))
 
+(defn connect
+  [machine state]
+  (let [network (:network @state)]
+    (if (connected? network)
+      ;; TODO confirm disconnect
+      (doecho "Already connected (disconnecting is TODO)")
+      ;; not connected! go ahead
+      (open-connection
+        state
+        (fn [info] 
+          (with-machine (doecho "Connecting..."))
+          ;; TODO connect
+          #_(connect! network )))))
+  ;; just reset the mode
+  (to-mode :normal))
+
 ;;
 ;; View commands
 ;;
@@ -430,3 +447,4 @@
              (fs/bays-empty? (:strips @state)))
       (notify-mode :normal "No flight strips")
       (to-mode new-mode))))
+

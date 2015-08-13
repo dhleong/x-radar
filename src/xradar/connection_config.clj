@@ -83,7 +83,6 @@
              [(s/button :text "Save Connection" :id :save :enabled? false) "grow"]
              [(s/button :text "Delete Connection" :id :delete :enabled? false) "grow"]
              [(s/button :text "Connect" :id :connect :enabled? false) "grow,span 2"]]))]
-    (s/request-focus! (s/select frame [:#callsign]))
     ;; "connect" is only enabled when all the
     ;;  text fields are non-empty. This is also
     ;;  a good condition for "save," but we will
@@ -102,5 +101,6 @@
     (s/listen (s/select frame [:#connect])
               :action (connect-action callback))
     (def last-frame frame)
-    (-> frame s/pack! s/show!)))
+    (-> frame s/pack! s/show!)
+    (s/request-focus! (s/select frame [:#callsign]))))
 
