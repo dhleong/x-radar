@@ -309,13 +309,10 @@
         (reify XRadarNetwork
           (connected? [this]
             @radar-connected)
-          (connect! [this & {:keys [on-connect on-fail
-                                    callsign real-name
-                                    facility rating
-                                    cid pass
-                                    server]}]
-            (swap! radar-connected (constantly true))
-            (on-connect))
+          (connect! [this params]
+            (let [{:keys [on-connect]} params]
+              (swap! radar-connected (constantly true))
+              (on-connect)))
           (disconnect! [this]
             (swap! radar-connected (constantly false)))
           (get-controllers [this]

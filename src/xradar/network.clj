@@ -9,11 +9,7 @@
     "Returns true if we have an active connection 
     to the network.")
   (connect!
-    [this & {:keys [on-connect on-fail
-                    callsign real-name
-                    facility rating
-                    cid pass
-                    server]}]
+    [this params]
     "Request a connection to the network using
     the given parameters.")
   (disconnect!

@@ -15,6 +15,7 @@
    :output
    {:background 0xcc36363F
     :outgoing 0xffFFFFFF
+    :success 0xff00EE00
     :text 0xffCCCCCC
     :warning 0xffEE0000}
    :strips
