@@ -5,6 +5,7 @@
             [quil
              [core :as q] 
              [middleware :as qm]]
+            [seesaw.core :as s]
             [xradar
              [commands :refer [use-native-input]]
              [input :refer [create-input describe-input 
@@ -67,6 +68,13 @@
   (if (= 27 (:key-code event))
     (assoc event :key :esc)
     event))
+
+(defn- get-frame
+  [sketch]
+  (loop [s sketch]
+    (if (instance? javax.swing.JFrame s)
+      s
+      (recur (.getParent s)))))
 
 (defn- position-window
   [sketch position]
@@ -259,6 +267,15 @@
       :key-released on-key-release
       :middleware [qm/pause-on-error qm/fun-mode setup-params])
     (position-window xradar (:win-position profile))
+    (doto
+      (get-frame xradar) 
+      (.setJMenuBar 
+        (s/menubar :items
+                   [(s/menu :text "File"
+                            :items [(s/action 
+                                      :name "Quit"
+                                      :handler (fn [_] nil))])]))
+      s/show!)
     (swap! state #(assoc % :sketch xradar))
     state))
 
