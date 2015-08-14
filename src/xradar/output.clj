@@ -116,16 +116,17 @@
             available-width
             max-output)
     ;; scroll bar!
-    (q/with-translation [(- available-width 
-                            scrollbar-width) 0]
-      (q/no-stroke)
-      (q/fill-int (-> scheme :output :text))
-      (q/rect 0 (- scroll-start)
-              scrollbar-width (- scroll-length))
-      (q/no-fill)
-      (q/stroke-int (-> scheme :output :text))
-      (q/line 0 0 scrollbar-width 0)
-      (q/line 0 (- max-output) scrollbar-width (- max-output)))
+    (when (> 0 scroll-length)
+      (q/with-translation [(- available-width 
+                              scrollbar-width) 0]
+        (q/no-stroke)
+        (q/fill-int (-> scheme :output :text))
+        (q/rect 0 (- scroll-start)
+                scrollbar-width (- scroll-length))
+        (q/no-fill)
+        (q/stroke-int (-> scheme :output :text))
+        (q/line 0 0 scrollbar-width 0)
+        (q/line 0 (- max-output) scrollbar-width (- max-output))))
     ;; output text
     (q/fill-int (-> scheme :output :text))
     (q/no-stroke)
