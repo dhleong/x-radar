@@ -11,6 +11,7 @@
 
 (def output-padding 10)
 (def output-size 14)
+(def scrollbar-width 8)
 
 ;; eg: `[00:00:00] ` but as all spaces
 (def multi-line-prefix "           ")
@@ -59,6 +60,24 @@
                (repeat chars-per-line))
        (take max-lines)))
 
+(defn calculate-scroll
+  "Returns a tuple of (start, length) describing
+  how to draw the scroll bars, where both are a
+  percentage of the output height"
+  [max-lines scrolled-lines output-buffer]
+  (let [buffer-size (count output-buffer)]
+    (if (= 0 buffer-size)
+    ;; empty buffer is a special case
+    [0 0]
+    (let [perc (/ max-lines buffer-size)
+          offset (/ scrolled-lines buffer-size)]
+      (if (>= perc 1)
+        ;; more visible lines than we have to render;
+        ;;  don't show the bars
+        [0 0]
+        ;; else, use the calculation
+        [offset perc])))))
+
 (defn resolve-color
   "Resolve the color to use to render the line.
   Public mostly for testing"
@@ -81,7 +100,14 @@
         available-width (- (q/width) output-padding output-padding)
         chars-per-line (int (Math/floor (/ available-width char-width)))
         output-buffer @(:output-buffer radar)
-        output-scroll (:output-scroll radar)]
+        output-scroll (:output-scroll radar)
+        ;; scroll bar stuff
+        [scroll-start-perc scroll-length-perc] 
+        (calculate-scroll 
+          max-output-count output-scroll output-buffer)
+        scroll-start (* scroll-start-perc max-output)
+        scroll-length (* scroll-length-perc max-output)]
+    ;; background
     (with-alpha q/fill-int (-> scheme :output :background))
     (q/no-stroke)
     (q/rect output-padding 
@@ -89,7 +115,20 @@
                max-output)
             available-width
             max-output)
+    ;; scroll bar!
+    (q/with-translation [(- available-width 
+                            scrollbar-width) 0]
+      (q/no-stroke)
+      (q/fill-int (-> scheme :output :text))
+      (q/rect 0 (- scroll-start)
+              scrollbar-width (- scroll-length))
+      (q/no-fill)
+      (q/stroke-int (-> scheme :output :text))
+      (q/line 0 0 scrollbar-width 0)
+      (q/line 0 (- max-output) scrollbar-width (- max-output)))
+    ;; output text
     (q/fill-int (-> scheme :output :text))
+    (q/no-stroke)
     (loop [output (build-output 
                     max-output-count
                     chars-per-line
