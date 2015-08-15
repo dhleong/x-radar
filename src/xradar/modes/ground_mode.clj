@@ -55,16 +55,10 @@
 
 (defmulti my-aircraft (fn [scheme craft] (:state craft :untracked)))
 (defmethod my-aircraft :tracked [scheme craft]
-  ;; draw first, because we may clear the fill
-  ;;  below to draw certain shapes
-  (draw-info-box scheme craft)
   (q/text-align :center :center)
   (q/text-size 14)
   (q/text (:tracked-by craft) 0 (* -0.18 (q/text-ascent))))
 (defmethod my-aircraft :untracked [scheme craft]
-  ;; draw first, because we may clear the fill
-  ;;  below to draw certain shapes
-  (draw-info-box scheme craft)
   (q/stroke-weight 1)
   (cond
     (= :standby (:squawking-mode craft))
@@ -92,6 +86,9 @@
   (draw-aircraft [this radar scheme craft]
     ;; we can simply wrap up our specific artist
     ;;  in the base draw method
-    (do-draw-aircraft radar scheme my-aircraft craft)))
+    (do-draw-aircraft radar scheme 
+                      my-aircraft my-aircraft
+                      draw-info-box
+                      craft)))
 
 (defn create-mode [] (GroundRadarMode.))

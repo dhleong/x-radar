@@ -5,7 +5,9 @@
 (def default
   {:background 0xff36363F
    :aircraft 
-   {:untracked 0xff00EE00
+   {:history 0xff007700
+    :history-selected 0xff777777
+    :untracked 0xff00EE00
     :tracked 0xff00FF00
     :selected 0xffFFFFFF}
    :echo 0xffFFFFFF
