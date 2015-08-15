@@ -7,6 +7,8 @@
             [seesaw.core :refer [invoke-later]]
             [xradar.util :refer [deep-merge map-coord]]))
 
+(def max-history 5)
+
 (defn get-location
   "Get the location on the screen of the radar window"
   [radar-atom]
@@ -27,11 +29,21 @@
     radar-atom
     (fn [radar craft] 
       (let [cid (:cid craft)
+            old-craft (get-in radar [:aircraft cid])
             mapped-coord (map-coord (-> radar :scene) craft)
-            mapped (merge craft mapped-coord)]
+            history (when old-craft 
+                      {:history 
+                       (->> (:history old-craft [])
+                            (cons  ; insert at the front
+                                  {:x (:x old-craft)
+                                   :y (:y old-craft)})
+                            (take max-history))})
+            mapped (merge craft history mapped-coord)]
         (redraw radar-atom)
         (deep-merge radar {:aircraft {cid mapped}})))
-    craft))
+    craft)
+    ;; return the updated aircraft
+    (get-in @radar-atom [:aircraft (:cid craft)]))
 
 (defn destroy-radar [radar]
   (applet-close (:sketch @radar)))
