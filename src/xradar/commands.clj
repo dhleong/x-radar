@@ -20,7 +20,8 @@
              [scene :refer [find-point]]
              [selection :refer [to-bindings from-bindings]]
              [selection-mode :as sm]
-             [util :refer [deep-merge in-bounds]]]))
+             [util :refer [deep-merge in-bounds]]
+             [voice-config :refer [open-voice-comms]]]))
 
 ;;
 ;; Constants
@@ -273,6 +274,12 @@
       (open-flight-plan state cid)
       (to-mode :normal))
     (notify-mode :normal "You must select an aircraft to edit its flight plan")))
+
+(defn toggle-voice-config
+  [machine state]
+  (open-voice-comms state)
+  ;; just reset the mode
+  (to-mode :normal))
 
 (defn connect
   ([machine state]
