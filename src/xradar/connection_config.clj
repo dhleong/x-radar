@@ -2,12 +2,12 @@
       :doc "Connection configuration"}
   xradar.connection-config
   (:require [seesaw
-             [bind :as b]
              [core :as s]
              [mig :refer [mig-panel]]]
             [xradar
              [network :refer [get-servers]]
-             [radar-util :refer [update-aircraft]]]))
+             [radar-util :refer [update-aircraft]]
+             [util :refer [when-none-empty-set-enabled]]]))
 
 (def facilities ["Observer"
                  "Flight Service Station"
@@ -88,15 +88,9 @@
     ;;  a good condition for "save," but we will
     ;;  add that after we add support for writing
     ;;  profile stuff to disk
-    (b/bind 
-      (apply b/funnel 
-        (->> text-value-fields
-             (map 
-               #(keyword (str "#" (name %))))
-             (map
-               #(s/select frame [%]))))
-      (b/transform #(every? (complement empty?) %))
-      (b/property (s/select frame [:#connect]) :enabled?))
+    (when-none-empty-set-enabled
+      (s/select frame [:#connect])
+      text-value-fields)
     ;; attach listeners
     (s/listen (s/select frame [:#connect])
               :action (connect-action callback))
