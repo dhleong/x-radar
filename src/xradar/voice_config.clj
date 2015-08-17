@@ -7,7 +7,8 @@
              [mig :refer [mig-panel]]
              [table :refer [table-model value-at update-at!]]]
             [xradar
-             [network :refer [config-voice! connected?]]]))
+             [network :refer [config-voice! connected?]]
+             [util :refer [when-none-empty-set-enabled]]]))
 
 (defn as-box
   [the-key]
@@ -15,9 +16,13 @@
    :text (upper-case (name the-key))
    :class java.lang.Boolean})
 
+(def text-value-fields [:name :freq :server :channel])
+
 (def table-columns
-  [:name :freq :server :channel (as-box :prim) 
-   (as-box :rx-t) (as-box :tx-t) (as-box :rx-v) (as-box :tx-v)])
+  (concat
+    text-value-fields
+    [(as-box :prim) (as-box :rx-t) (as-box :tx-t)
+     (as-box :rx-v) (as-box :tx-v)]))
 (def first-box-column 4)
 
 (def table-column-widths
@@ -65,21 +70,13 @@
 (defn open-voice-comms
   "Open the voice communications management window"
   [state]
-  (let [network (:network @state)
+  (let [radar @state
+        network (:network radar)
         model 
         (wrap-model state
           (table-model 
             :columns table-columns
-            ;; FIXME load from profile
-            :rows [{:name "Test"
-                    :freq "121.800"
-                    :server "voice.nyartcc.org"
-                    :channel "zny_bw"
-                    :prim false
-                    :rx-t false
-                    :tx-t false
-                    :rx-v false
-                    :tx-v false}]))
+            :rows (get-in radar [:profile :voice] [])))
         frame
         (s/frame
           :title "Voice Communications"
@@ -107,8 +104,15 @@
              ["Channel:" "Right"]
              [(s/text :id :channel) "grow,w 100::"]
              ;; buttons
-             ;; TODO
-             ]))]
+             [""] ;; spacing
+             [(s/button :text "Delete" :id :delete :enabled? false) "grow,span 4"]
+             [(s/button :text "Save" :id :save :enabled? false) "grow,span 4"]]))]
     (-> frame s/pack! s/show!)
     (s/config! (s/select frame [:#items])
-               :column-widths table-column-widths)))
+               :column-widths table-column-widths)
+    ;; some bindings
+    (when-none-empty-set-enabled
+      (s/select frame [:#save])
+      text-value-fields)
+    ;; return the frame
+    frame))
