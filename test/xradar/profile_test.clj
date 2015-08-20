@@ -40,4 +40,4 @@
       ;; profile overrides settings
       (is (= [:geo :labels] (-> prof :draw)))
       ;; but settings should be there when no conflict
-      #_(is (= 3 (-> prof :smoothing))))))
+      (is (= 3 (-> prof :smoothing))))))
