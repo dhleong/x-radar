@@ -26,7 +26,8 @@
     (merge-with 
       (fn [x y]
         (cond (and (map? x) (map? x)) (deep-merge x y)
-              (and (vector? x) (vector? x)) (concat x y) 
+              ;; why did I merge vectors? 
+              ;; (and (vector? x) (vector? x)) (concat x y) 
               :else y)) 
       base-map new-map)))
 
