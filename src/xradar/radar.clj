@@ -14,6 +14,7 @@
              [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork]]
              [output :refer [draw-output]]
+             [profile :refer [read-profile]]
              [radar-util :refer [update-aircraft]]
              [schemes :as schemes]
              [scene :refer [XScene get-center get-lon-scale
@@ -302,7 +303,7 @@
   (def radar-connected (atom false))
   (def radar 
     (create-radar 
-      {:debug true}
+      (assoc (read-profile) :debug true)
       (load-sector 
         "/Users/dhleong/VRC/Support/ZNY.sct2"
         #(add-aircraft radar))

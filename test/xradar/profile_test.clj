@@ -4,7 +4,7 @@
             [clojure.test :refer :all]
             [xradar
              [profile :refer :all]])
-  (:import [java.io File StringReader]))
+  (:import [java.io File StringReader StringWriter]))
 
 (def profile
   (join "\n"
@@ -41,3 +41,31 @@
       (is (= [:geo :labels] (-> prof :draw)))
       ;; but settings should be there when no conflict
       (is (= 3 (-> prof :smoothing))))))
+
+(deftest write-profile-test
+  (testing "Write new settings"
+    (let [radar (atom {})
+          output (StringWriter.)]
+      (write-profile output radar 
+                     :connections [{:callsign "ZNY_ZK_OBS"}])
+      (let [conns (-> @radar :profile :connections)
+            written (str output)] 
+        (is (= "ZNY_ZK_OBS" (:callsign (first conns))))
+        (is (= "#set/connections [{:callsign \"ZNY_ZK_OBS\"}]\n"
+               written)))))
+  (testing "Merge Settings"
+    (let [radar (atom {:profile 
+                       {:not-a-setting 42
+                        :connections [{:callsign "OLD"}]
+                        :comms [{:name "LGA_GND" :freq "121.700"}]}})
+          output (StringWriter.)]
+      (write-profile output radar 
+                     :connections [{:callsign "ZNY_ZK_OBS"}])
+      (let [conns (-> @radar :profile :connections)
+            written (str output)] 
+        (is (= 1 (count conns)))
+        (is (= "ZNY_ZK_OBS" (:callsign (first conns))))
+        (is (= (join
+                 ["#set/comms [{:freq \"121.700\", :name \"LGA_GND\"}]\n"
+                  "#set/connections [{:callsign \"ZNY_ZK_OBS\"}]\n"])
+               written)))))) 
