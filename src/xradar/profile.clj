@@ -57,27 +57,52 @@
         (:settings profile)
         {:bindings (:bindings profile)}]))))
 
+(defn- pick-settings-file
+  [radar]
+  (file
+    (or (:settings-file (:profile @radar))
+        default-settings-file)))
+
+(defn- swap-profile!
+  "Swap a new value into a profile field. Only
+  updates in-memory."
+  [radar field new-value & {:keys [settings-dirty]}]
+  (swap! radar deep-merge {:profile {field new-value}
+                           :settings-dirty settings-dirty}))
+
 (defn write-profile
-  "Public for testing; swap the new-value into the
-  profile in the radar atom and write into the writer"
-  [the-writer radar field new-value]
-  (swap! radar deep-merge {:profile {field new-value}})
+  "Write the current settings into the-writer.
+  Public for testing"
+  [the-writer radar]
   (let [profile (:profile @radar)
         new-settings (select-keys profile settings-keys)]
     (doseq [[k v] new-settings]
       (.write the-writer 
               (str "#set/" (name k) " " v "\n")))))
 
+(defn commit-profile
+  "Write the current settings to disk without making
+  any other changes (besides clearing the dirty flag)"
+  [radar]
+  (swap! radar assoc :settings-dirty false)
+  (with-open [the-writer (writer (pick-settings-file))]
+    (write-profile the-writer radar)))
+
 (defn update-profile
-  "See write-profile; this handles preparing the writer"
-  [radar field new-value]
-  (let [profile (:profile @radar)
-        settings-file (file
-                        (or (:settings-file profile)
-                            default-settings-file))]
-    (with-open [the-writer (writer settings-file)]
+  "See write-profile; this handles preparing the writer
+  if necessary. By default, it will just mark the profile
+  as dirty and swap in the value; if `:commit true` is passed,
+  then the dirty flag will be cleared and the updated profile
+  will be written to disk"
+  [radar field new-value & {:keys [commit]
+                            :or {commit false}}]
+  (swap-profile! radar field new-value
+                 :settings-dirty (not commit))
+  (if commit
+    (with-open [the-writer (writer (pick-settings-file))]
       (write-profile
         the-writer
-        radar
-        field
-        new-value))))
+        radar))
+    (do
+      (swap-profile! radar field new-value
+                     :settings-dirty true))))

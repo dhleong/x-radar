@@ -16,6 +16,10 @@
   {:settings {}
    :bindings {}})
 
+(defn do-write-profile [output radar field new-value]
+  (update-profile radar field new-value)
+  (write-profile output radar))
+
 (deftest read-profile-test
   (testing "Profile without settings"
     (let [prof (read-profile 
@@ -46,7 +50,7 @@
   (testing "Write new settings"
     (let [radar (atom {})
           output (StringWriter.)]
-      (write-profile output radar 
+      (do-write-profile output radar 
                      :connections [{:callsign "ZNY_ZK_OBS"}])
       (let [conns (-> @radar :profile :connections)
             written (str output)] 
@@ -59,7 +63,7 @@
                         :connections [{:callsign "OLD"}]
                         :comms [{:name "LGA_GND" :freq "121.700"}]}})
           output (StringWriter.)]
-      (write-profile output radar 
+      (do-write-profile output radar 
                      :connections [{:callsign "ZNY_ZK_OBS"}])
       (let [conns (-> @radar :profile :connections)
             written (str output)] 
@@ -69,3 +73,11 @@
                  ["#set/comms [{:freq \"121.700\", :name \"LGA_GND\"}]\n"
                   "#set/connections [{:callsign \"ZNY_ZK_OBS\"}]\n"])
                written)))))) 
+
+(deftest update-profile-test
+  (testing "Non-commit updates"
+    (let [radar (atom {})]
+      (update-profile radar 
+                     :connections [{:callsign "ZNY_ZK_OBS"}])
+      (is (= [{:callsign "ZNY_ZK_OBS"}] (-> @radar :profile :connections)))
+      (is (= true (:settings-dirty @radar))))))
