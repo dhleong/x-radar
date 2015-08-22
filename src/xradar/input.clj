@@ -65,6 +65,7 @@
                   27 "ESC"
                   9 "TAB"
                   45 (str (:raw-key event))
+                  59 "colon" ;; NB it will always be shifted, so...
                   61 (str (:raw-key event))
                   ;; default; fetch
                   (KeyEvent/getKeyText (:key-code event)))
@@ -152,7 +153,7 @@
   [machine-atom]
   ;; TODO
   (let [machine @machine-atom]
-    (str (select-keys machine [:current-bindings :mode :selected :current-sequence]))))
+    (str (select-keys machine [:current-bindings :mode :selected :last-press]))))
 
 (defn process-input-press
   "Process key pressed and update the machine"

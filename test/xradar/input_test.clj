@@ -19,7 +19,11 @@
   (testing "Special keys"
     (let [original {:key :esc :key-code 27}
           translated (translate-event (empty) original)]
-      (is (= original translated))))
+      (is (= original translated)))
+    (let [original {:key-code 59 :raw-key \: :key (keyword ";")}
+          translated (translate-event (empty) original)]
+      (is (= {:key :colon :key-code 59 :raw-key \:}
+             translated))))
   (testing "Simple letters"
     (let [original {:key :l :key-code 76}
           translated (translate-event (empty) original)]

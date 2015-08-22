@@ -5,7 +5,9 @@
            state is the radar's state atom. The return
            value MUST be the new machine state, if any."}
   xradar.commands
-  (:require [clojure.test :refer [function?]]
+  (:require [clojure
+             [edn :as edn]
+             [test :refer [function?]]]
             [quil.core :as q]
             [seesaw.core :as s]
             [xradar
@@ -16,11 +18,13 @@
              [network :refer [connect! connected? disconnect!
                               get-controllers push-strip! send! send-to!]]
              [output :refer [append-output]]
+             [profile :refer [commit-profile]]
              [radar-util :refer [get-location redraw]]
              [scene :refer [find-point]]
              [selection :refer [to-bindings from-bindings]]
              [selection-mode :as sm]
-             [util :refer [deep-merge in-bounds]]]))
+             [util :refer [deep-merge in-bounds]]])
+  (:import [java.io StringReader PushbackReader]))
 
 ;;
 ;; Constants
@@ -123,6 +127,9 @@
           ;; no such thing :(
           :else (notify-mode :normal
                              (str "No such command:" raw)))]
+    (def stuff {:raw-symbol raw-symbol?
+                :command command
+                :updated-machine updated-machine})
     ;; always clear the current sequence
     ;;  when we evaluate a command
     (assoc updated-machine
@@ -209,6 +216,28 @@
                    [(:raw-key last-press)])))))
 
 ;;
+;; Command Mode
+;;
+
+(defn start-command
+  ([machine state]
+   (start-insert machine state
+                 :prompt " :"
+                 :on-submit start-command))
+  ([machine state raw-command]
+   (when-let [trimmed (.trim raw-command)]
+     (let [input 
+           (if (and (.contains trimmed " ")
+                    (not= \( (first trimmed)))
+             (str "(" trimmed ")")
+             trimmed)
+           parsed (edn/read-string input)]
+       (try
+         (eval-command machine state parsed)
+         (catch Exception e
+           (doecho "Error: " (.getMessage e))))))))
+
+;;
 ;; Output navigation
 ;;
 
@@ -253,6 +282,15 @@
                        :selected cid 
                        :craft-bindings {}))
   (to-mode :normal))
+
+;;
+;; Data management
+;;
+
+(defn commit
+  [machine state]
+  (commit-profile state)
+  (doecho "Settings written to disk."))
 
 ;;
 ;; Selection mode

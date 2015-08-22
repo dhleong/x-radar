@@ -85,7 +85,7 @@
   any other changes (besides clearing the dirty flag)"
   [radar]
   (swap! radar assoc :settings-dirty false)
-  (with-open [the-writer (writer (pick-settings-file))]
+  (with-open [the-writer (writer (pick-settings-file radar))]
     (write-profile the-writer radar)))
 
 (defn update-profile
@@ -99,7 +99,7 @@
   (swap-profile! radar field new-value
                  :settings-dirty (not commit))
   (if commit
-    (with-open [the-writer (writer (pick-settings-file))]
+    (with-open [the-writer (writer (pick-settings-file radar))]
       (write-profile
         the-writer
         radar))

@@ -2,6 +2,7 @@
 ;; Normal mode
 ;;
 
+#map/normal/<colon> start-command
 #map/normal/i start-insert
 #map/normal/s start-select-aircraft
 
