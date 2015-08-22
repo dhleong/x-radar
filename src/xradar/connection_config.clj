@@ -42,6 +42,18 @@
     (callback (s/value (s/to-root e)))
     (.dispose (s/to-root e))))
 
+(defn- delete-action
+  [radar]
+  (fn [e]
+    (let [frame (s/to-frame e)
+          saved-list (s/select frame [:#saved])
+          selection (s/selection saved-list)
+          old-connections (get (:profile @radar) :connections [])
+          new-connections (remove #(= % selection) old-connections)]
+      (update-profile radar :connections new-connections)
+      (s/config! saved-list :model new-connections)
+      (s/selection! saved-list nil))))
+
 (defn- save-action
   [radar]
   (fn [e]
@@ -106,8 +118,8 @@
              ["Connection Name", "Right"]
              [(s/text :id :label) "grow,w 150::"]
              ;; input
-             [(s/button :text "Save Connection" :id :save :enabled? false) "grow"]
              [(s/button :text "Delete Connection" :id :delete :enabled? false) "grow"]
+             [(s/button :text "Save Connection" :id :save :enabled? false) "grow"]
              [(s/button :text "Connect" :id :connect :enabled? false) "grow,span 2"]]))]
     ;; "connect" and "save" are only enabled when 
     ;;  all the text fields are non-empty. 
@@ -125,12 +137,16 @@
     (b/bind
       (b/selection (s/select frame [:#saved]))
       (b/transform select-keys value-fields)
-      (b/value frame))
+      (b/tee 
+        (b/value frame)
+        (b/property (s/select frame [:#delete]) :enabled?)))
     ;; attach listeners
-    (s/listen (s/select frame [:#connect])
-              :action (connect-action callback))
+    (s/listen (s/select frame [:#delete])
+              :action (delete-action state))
     (s/listen (s/select frame [:#save])
               :action (save-action state))
+    (s/listen (s/select frame [:#connect])
+              :action (connect-action callback))
     (def last-frame frame)
     (-> frame s/pack! s/show!)
     (s/request-focus! (s/select frame [:#callsign]))))
