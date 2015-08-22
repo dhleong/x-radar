@@ -43,6 +43,17 @@
     (and (<= 0 sx w)
          (<= 0 sy h))))
 
+(defn list-replace
+  "Replace `old-value` with `new-value` in `coll`"
+  [old-value new-value coll]
+  ;; is there a better way to do this...?
+  (map
+    #(if (= % old-value)
+       new-value
+       %)
+    coll))
+
+
 ;;
 ;; Wacky hacks
 ;;

@@ -11,3 +11,11 @@
       (is (= 2 (count result)))
       (is (= 0xddEEEEEE (first result)))
       (is (= 221 (second result))))))
+
+(deftest list-replace-test
+  (testing "Replace primitives"
+    (is (= [1 2 3 8] (list-replace 4 8 [1 2 3 4]))))
+  (testing "Replace maps"
+    (is (= [{:win 4} {:bar 2} {:baz 3}]
+           (list-replace {:foo 1} {:win 4} 
+                         [{:foo 1} {:bar 2} {:baz 3}])))))

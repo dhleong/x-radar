@@ -3,11 +3,14 @@
   xradar.connection-config
   (:require [seesaw
              [bind :as b]
+             [cells :refer [to-cell-renderer]]
              [core :as s]
              [mig :refer [mig-panel]]]
             [xradar
              [network :refer [get-servers]]
-             [radar-util :refer [update-aircraft]]]))
+             [profile :refer [update-profile]]
+             [radar-util :refer [update-aircraft]]
+             [util :refer [list-replace]]]))
 
 (def facilities ["Observer"
                  "Flight Service Station"
@@ -39,6 +42,21 @@
     (callback (s/value (s/to-root e)))
     (.dispose (s/to-root e))))
 
+(defn- save-action
+  [radar]
+  (fn [e]
+    (let [frame (s/to-frame e)
+          saved-list (s/select frame [:#saved])
+          selection (s/selection saved-list)
+          conn-value (select-keys (s/value frame) value-fields)
+          old-connections (get (:profile @radar) :connections [])
+          new-connections (if selection
+                            (list-replace selection conn-value old-connections)
+                            (cons conn-value old-connections))]
+      (update-profile radar :connections new-connections)
+      (s/config! saved-list :model new-connections)
+      (s/selection! saved-list conn-value))))
+
 (defn open-connection
   "Open the connection config window"
   [state callback]
@@ -56,7 +74,15 @@
             [["Saved Connections" "align 50% 50%,span 4"]
              [(s/scrollable 
                 (s/listbox :id :saved
-                           :model [])) "grow,span 4 3"]
+                           :model (get (:profile @state) :connections [])
+                           :renderer 
+                           (fn [renderer info]
+                             (s/config! renderer
+                                        :text (str
+                                                (-> info :value :label)
+                                                ": " (-> info :value :facility)
+                                                " @" (-> info :value :callsign)))))) 
+              "grow,span 4 3"]
              ["Callsign:" "Right"]
              [(s/text :id :callsign) "grow,w 150::"]
              ["Real Name:" "Right"]
@@ -83,23 +109,28 @@
              [(s/button :text "Save Connection" :id :save :enabled? false) "grow"]
              [(s/button :text "Delete Connection" :id :delete :enabled? false) "grow"]
              [(s/button :text "Connect" :id :connect :enabled? false) "grow,span 2"]]))]
-    ;; "connect" is only enabled when all the
-    ;;  text fields are non-empty. This is also
-    ;;  a good condition for "save," but we will
-    ;;  add that after we add support for writing
-    ;;  profile stuff to disk
+    ;; "connect" and "save" are only enabled when 
+    ;;  all the text fields are non-empty. 
     (b/bind 
       (apply b/funnel 
-        (->> text-value-fields
-             (map 
-               #(keyword (str "#" (name %))))
-             (map
-               #(s/select frame [%]))))
+             (->> text-value-fields
+                  (map 
+                    #(keyword (str "#" (name %))))
+                  (map
+                    #(s/select frame [%]))))
       (b/transform #(every? (complement empty?) %))
-      (b/property (s/select frame [:#connect]) :enabled?))
+      (b/tee 
+        (b/property (s/select frame [:#connect]) :enabled?)
+        (b/property (s/select frame [:#save]) :enabled?)))
+    (b/bind
+      (b/selection (s/select frame [:#saved]))
+      (b/transform select-keys value-fields)
+      (b/value frame))
     ;; attach listeners
     (s/listen (s/select frame [:#connect])
               :action (connect-action callback))
+    (s/listen (s/select frame [:#save])
+              :action (save-action state))
     (def last-frame frame)
     (-> frame s/pack! s/show!)
     (s/request-focus! (s/select frame [:#callsign]))))

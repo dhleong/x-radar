@@ -6,7 +6,6 @@
              [string :refer [split]]]
             [clojure.java.io :as io]
             [xradar
-             [commands :as c]
              [util :refer [deep-merge]]]))
 
 (def default-bindings-filename "default-bindings.edn")
