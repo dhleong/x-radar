@@ -3,12 +3,14 @@
   xradar.voice-config
   (:require [clojure.string :refer [upper-case]]
             [seesaw
+             [bind :as b]
              [core :as s]
              [mig :refer [mig-panel]]
-             [table :refer [table-model value-at update-at!]]]
+             [table :refer [insert-at! remove-at! table-model update-at! value-at]]]
             [xradar
              [network :refer [config-voice! connected?]]
-             [util :refer [when-none-empty-set-enabled]]]))
+             [profile :refer [update-profile]]
+             [util :refer [list-replace when-none-empty-set-enabled]]]))
 
 (defn as-box
   [the-key]
@@ -35,6 +37,56 @@
     model
     {"isCellEditable" (fn [this row col]
                         (>= col first-box-column))}))
+
+(defn- save-action
+  [radar]
+  (fn [e]
+    (let [frame (s/to-frame e)
+          table (s/select frame [:#items])
+          old-connections (get (:profile @radar) :voice [])
+          selected-index (s/selection table)
+          selection (if (nil? selected-index)
+                      nil
+                      (nth old-connections selected-index))
+          conn-value (select-keys (s/value frame) text-value-fields)
+          new-connections (if selection
+                            (list-replace selection conn-value old-connections)
+                            (cons conn-value old-connections))]
+      (update-profile radar :voice new-connections)
+      (when-not selection
+        (s/value! frame (zipmap text-value-fields
+                                (repeat ""))))
+      (if selection
+        ;; update selected
+        (update-at! table selected-index conn-value)
+        ;; none selected; create new
+        (insert-at! table 0 conn-value)))))
+
+(defn- delete-action
+  [radar]
+  (fn [e]
+    (let [frame (s/to-frame e)
+          table (s/select frame [:#items])
+          old-connections (get (:profile @radar) :voice [])
+          selected-index (s/selection table)
+          selection (nth old-connections selected-index)
+          new-connections (vec (remove (partial = selection) old-connections))]
+      (update-profile radar :voice new-connections)
+      (try
+        (remove-at! table selected-index)
+        (catch NullPointerException e
+          ;; FIXME Hacks! An NPE is thrown in remove-at!
+          ;;  without any stack trace. As far as I can tell,
+          ;;  everything passed to remove-at! is fine (and
+          ;;  indeed, the row *is* removed from the table;
+          ;;  the UI is just not repainted, hence below).
+          ;;  Seesaw's unit tests for remove-at! have no
+          ;;  problems, so it must be something we're doing.
+          ;;  For now, though, this works.
+          ;; (def last-exc e)
+          ;; (clojure.stacktrace/print-stack-trace last-exc)
+          (s/repaint! frame)))
+      (s/selection! table nil))))
 
 (defn create-listener
   [network model]
@@ -114,5 +166,18 @@
     (when-none-empty-set-enabled
       (s/select frame [:#save])
       text-value-fields)
+    (b/bind
+      (b/selection (s/select frame [:#items]))
+      (b/transform #(nth (-> @state :profile :voice) %))
+      (b/transform select-keys text-value-fields)
+      (b/tee 
+        (b/value frame)
+        (b/property (s/select frame [:#delete]) :enabled?)))
+    ;; attach listeners
+    (s/listen (s/select frame [:#save])
+              :action (save-action state))
+    (s/listen (s/select frame [:#delete])
+              :action (delete-action state))
     ;; return the frame
+    (def last-frame frame)
     frame))

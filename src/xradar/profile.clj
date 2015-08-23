@@ -7,7 +7,7 @@
              [bindings :refer [read-bindings]]
              [util :refer [deep-merge]]]))
 
-(def settings-keys [:connections :comms])
+(def settings-keys [:connections :voice])
 
 (def windows? (-> (System/getProperty "os.name")
                   (.toLowerCase)
