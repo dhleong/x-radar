@@ -121,6 +121,7 @@
              [(s/button :text "Delete Connection" :id :delete :enabled? false) "grow"]
              [(s/button :text "Save Connection" :id :save :enabled? false) "grow"]
              [(s/button :text "Connect" :id :connect :enabled? false) "grow,span 2"]]))]
+<<<<<<< HEAD
     ;; "connect" and "save" are only enabled when 
     ;;  all the text fields are non-empty. 
     ;; TODO refactor to use when-none-empty-set-enabled
@@ -141,6 +142,16 @@
       (b/tee 
         (b/value frame)
         (b/property (s/select frame [:#delete]) :enabled?)))
+=======
+    ;; "connect" is only enabled when all the
+    ;;  text fields are non-empty. This is also
+    ;;  a good condition for "save," but we will
+    ;;  add that after we add support for writing
+    ;;  profile stuff to disk
+    (when-none-empty-set-enabled
+      (s/select frame [:#connect])
+      text-value-fields)
+>>>>>>> ad5ae766758b7ef144da28382247eb8e34966f52
     ;; attach listeners
     (s/listen (s/select frame [:#delete])
               :action (delete-action state))
