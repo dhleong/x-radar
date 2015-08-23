@@ -4,6 +4,16 @@
 
 (defprotocol XRadarNetwork
   "Protocol for network actions"
+  (config-voice!
+    [this config]
+    "Configure a voice connection. Expects a map:
+    {:freq '121.800' :server 'voice.nyartcc.org'
+    :channel 'zny_1c' :prim true 
+    :rx-t true :tx-t true :rx-v true :tx-v true}
+    The rx/tx values are receiving and transmitting,
+    respectively; the -t and -v refer to text and
+    voice, respectively. If :prim is true, then that
+    is to be the primary frequency.")
   (connected?
     [this]
     "Returns true if we have an active connection 

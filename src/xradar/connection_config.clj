@@ -10,7 +10,7 @@
              [network :refer [get-servers]]
              [profile :refer [update-profile]]
              [radar-util :refer [update-aircraft]]
-             [util :refer [list-replace]]]))
+             [util :refer [list-replace when-none-empty-set-enabled]]]))
 
 (def facilities ["Observer"
                  "Flight Service Station"
@@ -123,6 +123,7 @@
              [(s/button :text "Connect" :id :connect :enabled? false) "grow,span 2"]]))]
     ;; "connect" and "save" are only enabled when 
     ;;  all the text fields are non-empty. 
+    ;; TODO refactor to use when-none-empty-set-enabled
     (b/bind 
       (apply b/funnel 
              (->> text-value-fields

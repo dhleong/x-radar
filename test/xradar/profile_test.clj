@@ -61,7 +61,7 @@
     (let [radar (atom {:profile 
                        {:not-a-setting 42
                         :connections [{:callsign "OLD"}]
-                        :comms [{:name "LGA_GND" :freq "121.700"}]}})
+                        :voice [{:name "LGA_GND" :freq "121.700"}]}})
           output (StringWriter.)]
       (do-write-profile output radar 
                      :connections [{:callsign "ZNY_ZK_OBS"}])
@@ -70,7 +70,7 @@
         (is (= 1 (count conns)))
         (is (= "ZNY_ZK_OBS" (:callsign (first conns))))
         (is (= (join
-                 ["#set/comms [{:freq \"121.700\", :name \"LGA_GND\"}]\n"
+                 ["#set/voice [{:freq \"121.700\", :name \"LGA_GND\"}]\n"
                   "#set/connections [{:callsign \"ZNY_ZK_OBS\"}]\n"])
                written)))))) 
 

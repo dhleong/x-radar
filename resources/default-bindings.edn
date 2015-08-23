@@ -30,6 +30,7 @@
 #map/normal/of toggle-flight-strips
 #map/normal/os toggle-flight-strips
 #map/normal/op toggle-flight-plan
+#map/normal/ov toggle-voice-config
 #map/normal/oc connect
 
 ;;
