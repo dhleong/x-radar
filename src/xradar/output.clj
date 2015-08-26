@@ -31,6 +31,19 @@
             :with with}))
   (redraw state))
 
+(defn get-active-buffer
+  "Return the active buffer as a vector.
+  NOTE that it expects the radar MAP, NOT
+  the state ATOM (like draw-output). 
+  Public for testing purposes; you shouldn't
+  need to access the output buffer directly."
+  [radar]
+  (let [current (:current-output radar)
+        raw @(:output-buffer radar)]
+    (if (= :global current)
+      raw
+      (filter #(= current (:with %)) raw))))
+
 (defn buffer-count
   [state]
   (count (get-active-buffer @state)))
@@ -94,19 +107,6 @@
         [0 0]
         ;; else, use the calculation
         [offset perc])))))
-
-(defn get-active-buffer
-  "Return the active buffer as a vector.
-  NOTE that it expects the radar MAP, NOT
-  the state ATOM (like draw-output). 
-  Public for testing purposes; you shouldn't
-  need to access the output buffer directly."
-  [radar]
-  (let [current (:current-output radar)
-        raw @(:output-buffer radar)]
-    (if (= :global current)
-      raw
-      (filter #(= current (:with %)) raw))))
 
 (defn resolve-color
   "Resolve the color to use to render the line.
