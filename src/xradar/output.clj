@@ -111,13 +111,12 @@
 (defn resolve-color
   "Resolve the color to use to render the line.
   Public mostly for testing"
-  [scheme line]
+  [scheme current-output line]
   (let [color (:color line)]
     (cond
       (keyword? color) (-> scheme :output color)
       (integer? color) color 
-      ;; TODO special color for private chats
-      ;;  when in :global mode, else normal
+      (= :global current-output) (-> scheme :output :private)
       :else (-> scheme :output :text))))
 
 (defn draw-output
@@ -169,7 +168,9 @@
            offset 0]
       (when (seq output)
         (let [line (first output)]
-          (q/fill-int (resolve-color scheme line))
+          (q/fill-int (resolve-color scheme 
+                                     (:current-output radar) 
+                                     line))
           (q/text (:text line) 
                   output-padding 
                   (- offset)))

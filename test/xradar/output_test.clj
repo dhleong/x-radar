@@ -19,7 +19,8 @@
 (def color-scheme
   {:output
    {:text 0xffEEEEEE
-    :outgoing 0xffFFFFFF}})
+    :outgoing 0xffFFFFFF
+    :private 0xff4DE5FF}})
 
 (deftest format-text-test
   (testing "Format single line"
@@ -78,14 +79,27 @@
   (testing "Direct colors"
     (is (= 0xffFFFFFF (resolve-color 
                         color-scheme 
+                        :global
                         {:color 0xffFFFFFF}))))
   (testing "Named scheme colors"
     (is (= 0xffEEEEEE (resolve-color 
                         color-scheme 
+                        :global
                         {:color :text})))
     (is (= 0xffFFFFFF (resolve-color 
                         color-scheme 
-                        {:color :outgoing})))))
+                        :global
+                        {:color :outgoing}))))
+  (testing "Private chats in global mode"
+    (is (= 0xff4DE5FF (resolve-color 
+                        color-scheme 
+                        :global
+                        {:with 42}))))
+  (testing "Private chats in filtered mode"
+    (is (= 0xffEEEEEE (resolve-color 
+                        color-scheme 
+                        42
+                        {:with 42})))))
 
 (deftest buffer-swapping-test
   (let [state (atom (create-output-buffers))]

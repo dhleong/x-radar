@@ -17,6 +17,7 @@
    :output
    {:background 0xcc36363F
     :outgoing 0xffFFFFFF
+    :private 0xff4DE5FF
     :success 0xff00EE00
     :text 0xffCCCCCC
     :warning 0xffEE0000}
