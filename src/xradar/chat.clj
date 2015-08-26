@@ -6,7 +6,7 @@
             [quil.core :as q]
             [xradar
              [output :refer [append-output]]
-             [network :refer [get-controllers]]
+             [network :refer [connected? get-controllers send! send-to!]]
              [util :refer [with-alpha]]]))
 
 (defn- cid-to-controller
@@ -34,7 +34,52 @@
   (let [current (:current-output @state)]
     (if (= :global current)
       :global
-      (object-for current))))
+      (object-for state current))))
+
+(defn send-chat!
+  "Send the provided message as chat to the
+  correct channel, etc. based on the current
+  settings.
+  If an aircraft is selected and
+  output is in :global mode, the message will
+  be sent with the selected aircraft's callsign
+  prepended.
+  If no aircraft is selected in :global mode, the
+  message will be sent as normal.
+  If output is filtered, regardless of the aircraft
+  selection the message will be sent as a private
+  message to the CID the filter is set to."
+  [state message]
+  (let [network (:network @state)
+        is-connected? (connected? network)
+        selected (:selected @state)
+        output-filter (:current-output @state)] 
+    (cond
+      ;; are we even connected?
+      (not is-connected?)
+      (append-output state "ERR: Not Connected"
+                     :color :error)
+      ;; output filtered?
+      (not= :global output-filter)
+      (let [craft (object-for state output-filter)]
+        (append-output state message
+                       :color :outgoing
+                       :with output-filter
+                       :with-label (:callsign craft))
+        (send-to! network output-filter message))
+      ;; aircraft selected?
+      (not (nil? selected))
+      (let [craft (object-for state selected)
+            formatted (str (:callsign craft) ", " message)]
+        (append-output state formatted
+                       :color :outgoing)
+        (send! network formatted))
+      ;; default
+      :else
+      (do
+        (append-output state message
+                       :color :outgoing)
+        (send! network message)))))
 
 (defn receive-from
   "Call when a private chat is received"

@@ -11,12 +11,13 @@
             [quil.core :as q]
             [seesaw.core :as s]
             [xradar
+             [chat :refer [send-chat!]]
              [connection-config :refer [open-connection]]
              [flight-plan :refer [open-flight-plan]]
              [flight-strips :as fs]
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
-                              get-controllers push-strip! send! send-to!]]
+                              get-controllers push-strip!]]
              [output :refer [append-output buffer-count]]
              [profile :refer [commit-profile]]
              [radar-util :refer [get-location redraw]]
@@ -42,20 +43,7 @@
 
 (defn- default-input-submit
   [machine state message]
-  (try
-    (def submits (inc submits))
-    (let [network (:network @state)] 
-      (if-let [selected (:selected @state)]
-        (let [craft (get (:aircraft @state) selected {:callsign selected})]
-          (append-output state (str (:callsign craft) ", " message)
-                         :color :outgoing)
-          (send-to! network selected message))
-        (do
-          (append-output state message
-                         :color :outgoing)
-          (send! network message))))
-    (catch Throwable e
-      (def last-exc e))))
+  (send-chat! state message))
 
 ;;
 ;; Util methods and macros
