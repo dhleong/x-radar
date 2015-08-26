@@ -13,7 +13,7 @@
              [flight-strips :refer [create-strip-bay render-strip-bay]]
              [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork]]
-             [output :refer [draw-output]]
+             [output :refer [create-output-buffers draw-output]]
              [profile :refer [read-profile]]
              [radar-util :refer [update-aircraft]]
              [schemes :as schemes]
@@ -239,13 +239,14 @@
   {:pre [(satisfies? XRadarNetwork network)
          (satisfies? XScene scene)]}
   (let [profile (fill-profile raw-profile)
-        state (atom {:profile profile
-                     :network network
-                     :output-buffer (atom [])
-                     :output-scroll 0
-                     :scene scene
-                     :strips (create-strip-bay)
-                     :aircraft {}})]
+        state (atom (deep-merge
+                      {:profile profile
+                       :network network
+                       :output-scroll 0
+                       :scene scene
+                       :strips (create-strip-bay)
+                       :aircraft {}}
+                      (create-output-buffers)))]
     (q/defsketch xradar
       :title "xRadar"
       :setup setup

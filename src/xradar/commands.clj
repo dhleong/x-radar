@@ -17,7 +17,7 @@
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
                               get-controllers push-strip! send! send-to!]]
-             [output :refer [append-output]]
+             [output :refer [append-output buffer-count]]
              [profile :refer [commit-profile]]
              [radar-util :refer [get-location redraw]]
              [scene :refer [find-point]]
@@ -245,7 +245,7 @@
 (defn output-scroll
   [machine state amount]
   (swap! state 
-         #(let [outputs (count @(:output-buffer @state))
+         #(let [outputs (buffer-count state)
                 output-size (-> @state :profile :output-size)
                 last-scroll (:output-scroll %)
                 new-scroll (+ amount last-scroll)

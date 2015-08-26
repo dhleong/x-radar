@@ -18,8 +18,8 @@
 
 (defn append-output
   "Append a line of output"
-  [radar text & {:keys [color]}]
-  (let [output (:output-buffer @radar)]
+  [state text & {:keys [color with]}]
+  (let [output (:output-buffer @state)]
     (swap! output 
            (fn [buf new-entry] 
              (cons new-entry buf))
@@ -27,8 +27,25 @@
             :time (l/format-local-time 
                     (l/local-now) 
                     :hour-minute-second)
-            :color color})
-    (redraw radar)))
+            :color color
+            :with with}))
+  (redraw state))
+
+(defn buffer-count
+  [state]
+  (count (get-active-buffer @state)))
+
+(defn create-output-buffers
+  []
+  {:output-buffer (atom [])
+   :current-output :global})
+
+(defn set-active!
+  "Set the currently active chat. Either pass a cid
+  of a pilot or controller to filter to, or :global
+  to show all chats together"
+  [state cid-or-global]
+  (swap! state assoc :current-output cid-or-global))
 
 (defn format-text
   "Splits text into multiple lines as necessary"
@@ -78,6 +95,19 @@
         ;; else, use the calculation
         [offset perc])))))
 
+(defn get-active-buffer
+  "Return the active buffer as a vector.
+  NOTE that it expects the radar MAP, NOT
+  the state ATOM (like draw-output). 
+  Public for testing purposes; you shouldn't
+  need to access the output buffer directly."
+  [radar]
+  (let [current (:current-output radar)
+        raw @(:output-buffer radar)]
+    (if (= :global current)
+      raw
+      (filter #(= current (:with %)) raw))))
+
 (defn resolve-color
   "Resolve the color to use to render the line.
   Public mostly for testing"
@@ -86,6 +116,8 @@
     (cond
       (keyword? color) (-> scheme :output color)
       (integer? color) color 
+      ;; TODO special color for private chats
+      ;;  when in :global mode, else normal
       :else (-> scheme :output :text))))
 
 (defn draw-output
@@ -99,7 +131,7 @@
         char-width (q/text-width "M")
         available-width (- (q/width) output-padding output-padding)
         chars-per-line (int (Math/floor (/ available-width char-width)))
-        output-buffer @(:output-buffer radar)
+        output-buffer (get-active-buffer radar)
         output-scroll (:output-scroll radar)
         ;; scroll bar stuff
         [scroll-start-perc scroll-length-perc] 

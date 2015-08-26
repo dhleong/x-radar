@@ -86,3 +86,24 @@
     (is (= 0xffFFFFFF (resolve-color 
                         color-scheme 
                         {:color :outgoing})))))
+
+(deftest buffer-swapping-test
+  (let [state (atom (create-output-buffers))]
+    (append-output state "Private" :with 42)
+    (append-output state "Global")
+    (testing "Filter to private with CID"
+      (set-active! state 42)
+      (is (= 42 (:current-output @state)))
+      (is (= 1 (buffer-count state)))
+      (is (= "Private" (-> (get-active-buffer @state) first :text))))
+    (testing "Include All with :global"
+      (set-active! state :global)
+      (is (= :global (:current-output @state)))
+      (is (= 2 (buffer-count state)))
+      (is (= "Global" (-> (get-active-buffer @state) first :text)))
+      (is (= "Private" (-> (get-active-buffer @state) second :text))))
+    (testing "New CID doesn't break"
+      (set-active! state 9001)
+      (is (= 9001 (:current-output @state)))
+      (is (= 0 (buffer-count state)))
+      (is (= [] (get-active-buffer @state))))))
