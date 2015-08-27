@@ -86,7 +86,10 @@
   of a pilot or controller to filter to, or :global
   to show all chats together"
   [state cid-or-global]
-  (swap! state assoc :current-output cid-or-global))
+  (swap! state 
+         assoc 
+         :current-output cid-or-global
+         :output-scroll 0)) ; reset the scroll on switch, I guess
 
 (defn format-text
   "Splits text into multiple lines as necessary"
@@ -184,7 +187,7 @@
     (when (not= :global active-chat)
       ;; private chat mode!
       (q/with-rotation [(/ Math/PI -2)]
-        (q/fill-int (-> scheme :output :private))
+        (q/fill-int (-> scheme :output :text))
         (q/text (or (:callsign active-chat) "???")
                 0
                 (+ output-padding output-size)))

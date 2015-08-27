@@ -242,15 +242,15 @@
   [machine state amount]
   (swap! state 
          #(let [outputs (buffer-count state)
-                output-size (-> @state :profile :output-size)
+                output-size (-> % :profile :output-size)
                 last-scroll (:output-scroll %)
                 new-scroll (+ amount last-scroll)
                 adjusted (-> new-scroll
-                             (max 0)
-                             (min (- outputs output-size)))]
+                             (min (- outputs output-size))
+                             (max 0))]
             (assoc % :output-scroll adjusted)))
-  ;; no change in machine
-  machine)
+  ;; no change in machine besides resetting sequence
+  (to-mode :normal))
 
 ;;
 ;; Aircraft selection
