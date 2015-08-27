@@ -84,16 +84,16 @@
                                 (count multi-line-prefix))
                              (:text line))
         time-text (str "[" (:time line) "] ") 
-        time-line {:color color
-                   :text (str time-text
-                              (apply str (first lines)))}
+        time-line (assoc line
+                         :text (str time-text
+                                    (apply str (first lines))))
         other-lines (rest lines)]
       (-> (cons 
             time-line
             (map
               (fn [text]
-                {:color color
-                 :text (apply str multi-line-prefix text)})
+                (assoc line 
+                       :text (apply str multi-line-prefix text)))
               other-lines))
           reverse)))
 
@@ -130,9 +130,11 @@
   [scheme current-output line]
   (let [color (:color line)]
     (cond
+      (and 
+        (= :global current-output)
+        (not (nil? (:with line)))) (-> scheme :output :private)
       (keyword? color) (-> scheme :output color)
       (integer? color) color 
-      (= :global current-output) (-> scheme :output :private)
       :else (-> scheme :output :text))))
 
 (defn draw-output
