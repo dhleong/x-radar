@@ -8,24 +8,7 @@
              [output :refer [append-output]]
              [network :refer [connected? get-controllers 
                               my-callsign send! send-to!]]
-             [util :refer [with-alpha]]]))
-
-(defn- cid-to-controller
-  [state cid]
-  (let [network (:network @state)
-        controllers (get-controllers network)]
-    (->> controllers
-        (filter #(= cid (:cid %)))
-        first)))
-
-(defn object-for
-  "Returns the pilot/controller object of the 
-  given cid"
-  [state cid]
-  (get-in @state 
-          [:aircraft cid]
-          ;; try controller
-          (cid-to-controller state cid)))
+             [util :refer [object-for with-alpha]]]))
 
 
 (defn- prefix-incoming
@@ -55,16 +38,6 @@
          (prefix-outgoing state message) 
          parts))
 
-
-(defn selected-chat
-  "Returns the pilot/controller object of the 
-  currently-selected chat, or :global if viewing 
-  global chat."
-  [state]
-  (let [current (:current-output @state)]
-    (if (= :global current)
-      :global
-      (object-for state current))))
 
 (defn send-chat!
   "Send the provided message as chat to the

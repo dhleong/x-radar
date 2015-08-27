@@ -7,7 +7,7 @@
             [quil.core :as q]
             [xradar
              [radar-util :refer [redraw]]
-             [util :refer [with-alpha]]]))
+             [util :refer [object-for with-alpha]]]))
 
 (def output-padding 10)
 (def output-size 14)
@@ -68,6 +68,18 @@
   []
   {:output-buffer (atom [])
    :current-output :global})
+
+(defn get-active
+  "Returns the pilot/controller object of the 
+  currently active chat, or :global if viewing 
+  global chat."
+  [state]
+  (let [current (if (map? state)
+                  (:current-output state)
+                  (:current-output @state))]
+    (if (= :global current)
+      :global
+      (object-for state current))))
 
 (defn set-active!
   "Set the currently active chat. Either pass a cid
@@ -143,10 +155,14 @@
   (q/text-align :left)
   (q/rect-mode :corner)
   (let [scheme (-> radar :profile :scheme)
+        active-chat (get-active radar)
         max-output-count (-> radar :profile :output-size)
         max-output (* output-size max-output-count)
         char-width (q/text-width "M")
-        available-width (- (q/width) output-padding output-padding)
+        base-available-width (- (q/width) output-padding output-padding)
+        available-width (if (= :global active-chat)
+                          base-available-width
+                          (- base-available-width output-size output-padding)) 
         chars-per-line (int (Math/floor (/ available-width char-width)))
         output-buffer (get-active-buffer radar)
         output-scroll (:output-scroll radar)
@@ -162,8 +178,18 @@
     (q/rect output-padding 
             (- output-padding
                max-output)
-            available-width
+            base-available-width
             max-output)
+    (q/push-matrix)
+    (when (not= :global active-chat)
+      ;; private chat mode!
+      (q/with-rotation [(/ Math/PI -2)]
+        (q/fill-int (-> scheme :output :private))
+        (q/text (or (:callsign active-chat) "???")
+                0
+                (+ output-padding output-size)))
+      ;; offset everything else
+      (q/translate (+ output-size output-padding) 0))
     ;; scroll bar!
     (when (> 0 scroll-length)
       (q/with-translation [(- available-width 
@@ -194,4 +220,5 @@
                   (- offset)))
         (when (< offset max-output)
           (recur (rest output)
-                 (+ offset output-size)))))))
+                 (+ offset output-size)))))
+    (q/pop-matrix)))
