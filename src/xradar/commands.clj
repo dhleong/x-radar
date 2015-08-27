@@ -18,7 +18,8 @@
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
                               get-controllers push-strip!]]
-             [output :refer [append-output buffer-count set-active!]]
+             [output :refer [append-output buffer-count 
+                             get-active set-active!]]
              [profile :refer [commit-profile]]
              [radar-util :refer [get-location redraw]]
              [scene :refer [find-point]]
@@ -313,6 +314,7 @@
   (let [cid (if (map? cid-or-object)
               (:cid cid-or-object)
               cid-or-object)]
+    (def setting-active cid)
     (set-active! state cid)
     (to-mode :normal)))
 
@@ -321,6 +323,21 @@
   [machine state]
   (set-active! state :global)
   (to-mode :normal))
+
+(defn toggle-selected-chat
+  "Switch between a private chat with the selected
+  aircraft and the global chat."
+  [machine state]
+  (let [chat-target (get-active state)
+        selected (:selected @state)]
+    (def mytarget chat-target)
+    (def mysel selected)
+    (cond
+      (nil? selected)
+      (notify-mode :normal "You must select an aircraft")
+      (= :global chat-target)
+      (toggle-private-chat machine state selected)
+      :else (toggle-combined-chat machine state))))
 
 (defn cancel-toggle-chat
   [machine state]

@@ -41,6 +41,8 @@
 ; "Goto All Chats"
 #map/normal/gac toggle-combined-chat
 
+;; NB we may use lower-c as "select and enter insert"
+#map/normal/C toggle-selected-chat
 #map/normal/r reply-private-chat
 #map/normal/R prompt-reply-private-chat
 
