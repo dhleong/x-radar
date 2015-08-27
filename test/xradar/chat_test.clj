@@ -21,6 +21,8 @@
                (swap! is-connected? (constantly true)))
              (get-controllers [this]
                @controllers)
+             (my-callsign [this]
+               "LGA_GND")
              (send! [this message]
                (swap! network-output conj message))
              (send-to! [this cid message]
@@ -49,7 +51,7 @@
     (let [state (new-radar)]
       (do-connect! state)
       (send-chat! state "Test")
-      (is (= "Test" (:text (last-output state))))
+      (is (= "LGA_GND: Test" (:text (last-output state))))
       (is (= "Test" (last-sent state)))))
   (testing "Connected, selection"
     (let [state (new-radar)]
@@ -59,7 +61,7 @@
              :aircraft {42 {:callsign "ACA42"}}
              :selected 42)
       (send-chat! state "Test")
-      (is (= "ACA42, Test" (:text (last-output state))))
+      (is (= "LGA_GND: ACA42, Test" (:text (last-output state))))
       (is (nil? (:with (last-output state))))
       (is (= "ACA42, Test" (last-sent state)))))
   (testing "Connected, filtered, no selection"
@@ -67,7 +69,7 @@
       (do-connect! state)
       (set-active! state 42)
       (send-chat! state "Test")
-      (is (= "Test" (:text (last-output state))))
+      (is (= "LGA_GND: Test" (:text (last-output state))))
       (is (= 42 (:with (last-output state))))
       (is (= "Test" (:message (last-sent state))))
       (is (= 42 (:cid (last-sent state))))))
@@ -80,7 +82,7 @@
              :selected 9001)
       (set-active! state 42)
       (send-chat! state "Test")
-      (is (= "Test" (:text (last-output state))))
+      (is (= "LGA_GND: Test" (:text (last-output state))))
       (is (= 42 (:with (last-output state))))
       (is (= "Test" (:message (last-sent state))))
       (is (= 42 (:cid (last-sent state)))))))

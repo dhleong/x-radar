@@ -6,7 +6,8 @@
             [quil.core :as q]
             [xradar
              [output :refer [append-output]]
-             [network :refer [connected? get-controllers send! send-to!]]
+             [network :refer [connected? get-controllers 
+                              my-callsign send! send-to!]]
              [util :refer [with-alpha]]]))
 
 (defn- cid-to-controller
@@ -16,6 +17,19 @@
     (->> controllers
         (filter #(= cid (:cid %)))
         first)))
+
+(defn- prefix-outgoing
+  [state & parts]
+  (str (my-callsign (:network @state))
+       ": "
+       (apply str parts)))
+
+(defn append-prefixed
+  [state message & parts]
+  (apply append-output 
+         state 
+         (prefix-outgoing state message) 
+         parts))
 
 (defn object-for
   "Returns the pilot/controller object of the 
@@ -62,23 +76,23 @@
       ;; output filtered?
       (not= :global output-filter)
       (let [craft (object-for state output-filter)]
-        (append-output state message
-                       :color :outgoing
-                       :with output-filter
-                       :with-label (:callsign craft))
+        (append-prefixed state message
+                         :color :outgoing
+                         :with output-filter
+                         :with-label (:callsign craft))
         (send-to! network output-filter message))
       ;; aircraft selected?
       (not (nil? selected))
       (let [craft (object-for state selected)
             formatted (str (:callsign craft) ", " message)]
-        (append-output state formatted
-                       :color :outgoing)
+        (append-prefixed state formatted
+                         :color :outgoing)
         (send! network formatted))
       ;; default
       :else
       (do
-        (append-output state message
-                       :color :outgoing)
+        (append-prefixed state message
+                         :color :outgoing)
         (send! network message)))))
 
 (defn receive-from

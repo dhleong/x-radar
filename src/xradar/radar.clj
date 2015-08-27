@@ -301,7 +301,7 @@
    {:cid 113 :callsign "LGA_TWR"}])
 
 (defn- testing []
-  (def radar-connected (atom false))
+  (def radar-connection (atom nil))
   (def radar 
     (create-radar 
       (assoc (read-profile) :debug true)
@@ -312,18 +312,20 @@
         (config-voice! [this config]
           (future (swap! (:input @radar) #(assoc % :last-echo (str "! " config)))))
         (connected? [this]
-          @radar-connected)
+          (not (nil? @radar-connection)))
         (connect! [this params]
           (let [{:keys [on-connect]} params]
-            (swap! radar-connected (constantly true))
+            (swap! radar-connection (constantly params))
             (on-connect)))
         (disconnect! [this]
-          (swap! radar-connected (constantly false)))
+          (swap! radar-connection (constantly nil)))
         (get-controllers [this]
           (make-controllers))
         (get-servers [this]
           {"USA-E" {:ip "97.107.135.245"}
            "USA-W" {:ip "50.116.3.203"}})
+        (my-callsign [this]
+          (:callsign @radar-connection))
         (push-strip! [this cid strip]
           ;; just ignore
           nil)
