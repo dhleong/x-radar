@@ -67,7 +67,8 @@
 (defn create-output-buffers
   []
   {:output-buffer (atom [])
-   :current-output :global})
+   :current-output :global
+   :pending-messages (atom 0)})
 
 (defn get-active
   "Returns the pilot/controller object of the 
@@ -89,7 +90,9 @@
   (swap! state 
          assoc 
          :current-output cid-or-global
-         :output-scroll 0)) ; reset the scroll on switch, I guess
+         :output-scroll 0)  ; reset the scroll on switch, I guess
+  (when (= :global cid-or-global)
+    (swap! (:pending-messages @state) (constantly 0))))
 
 (defn format-text
   "Splits text into multiple lines as necessary"

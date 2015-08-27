@@ -29,7 +29,13 @@
   (apply append-output 
          state 
          (prefix-incoming state cid message) 
-         parts))
+         parts)
+  (let [{:keys [with]} parts
+        chat-target (:current-output @state)]
+    (when (and
+            (not= :global chat-target)
+            (not= chat-target with))
+      (swap! (:pending-messages @state) inc))))
 
 (defn append-prefixed
   [state message & parts]

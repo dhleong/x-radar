@@ -132,7 +132,9 @@
       (receive-from state 42 "Test")
       (is (= "ACA42: Test" (:text (last-output state))))
       (is (nil? (:with (last-output state))))
-      (is (= "ACA42: Test" (:text (last-shown state))))))
+      (is (= "ACA42: Test" (:text (last-shown state))))
+      ;; no pending because we're looking at it!
+      (is (= 0 @(:pending-messages @state)))))
   (testing "Receive global when filtered"
     (let [state (new-radar)]
       (do-connect! state)
@@ -144,4 +146,8 @@
       (receive-from state 42 "Test")
       (is (= "ACA42: Test" (:text (last-output state))))
       (is (nil? (:with (last-output state))))
-      (is (nil? (last-shown state))))))
+      (is (nil? (last-shown state)))
+      (is (= 1 @(:pending-messages @state)))
+      ;; switch to global to clear pending count
+      (set-active! state :global)
+      (is (= 0 @(:pending-messages @state))))))
