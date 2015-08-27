@@ -18,19 +18,6 @@
         (filter #(= cid (:cid %)))
         first)))
 
-(defn- prefix-outgoing
-  [state & parts]
-  (str (my-callsign (:network @state))
-       ": "
-       (apply str parts)))
-
-(defn append-prefixed
-  [state message & parts]
-  (apply append-output 
-         state 
-         (prefix-outgoing state message) 
-         parts))
-
 (defn object-for
   "Returns the pilot/controller object of the 
   given cid"
@@ -39,6 +26,35 @@
           [:aircraft cid]
           ;; try controller
           (cid-to-controller state cid)))
+
+
+(defn- prefix-incoming
+  [state cid & parts]
+  (let [obj (object-for state cid)]
+    (str (or (:callsign obj) "???")
+         ": "
+         (apply str parts))))
+
+(defn- prefix-outgoing
+  [state & parts]
+  (str (my-callsign (:network @state))
+       ": "
+       (apply str parts)))
+
+(defn append-incoming
+  [state cid message & parts]
+  (apply append-output 
+         state 
+         (prefix-incoming state cid message) 
+         parts))
+
+(defn append-prefixed
+  [state message & parts]
+  (apply append-output 
+         state 
+         (prefix-outgoing state message) 
+         parts))
+
 
 (defn selected-chat
   "Returns the pilot/controller object of the 
@@ -95,7 +111,13 @@
                          :color :outgoing)
         (send! network message)))))
 
-(defn receive-from
+(defn receive-from-private
   "Call when a private chat is received"
   [state cid message]
-  (append-output state :with cid))
+  (append-incoming state cid message
+                   :with cid))
+
+(defn receive-from
+  "Call when a public chat is received"
+  [state cid message]
+  (append-incoming state cid message))
