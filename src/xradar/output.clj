@@ -191,7 +191,7 @@
       ;; offset everything else
       (q/translate (+ output-size output-padding) 0))
     ;; scroll bar!
-    (when (> 0 scroll-length)
+    (when (> (int scroll-length) 0)
       (q/with-translation [(- available-width 
                               scrollbar-width) 0]
         (q/no-stroke)
