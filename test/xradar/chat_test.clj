@@ -73,6 +73,10 @@
   (testing "Connected, filtered, no selection"
     (let [state (new-radar)]
       (do-connect! state)
+      (swap! state 
+             assoc 
+             :aircraft {42 {:callsign "ACA42"}}
+             :selected 42)
       (set-active! state 42)
       (send-chat! state "Test")
       (is (= "LGA_GND: Test" (:text (last-output state))))
@@ -84,7 +88,8 @@
       (do-connect! state)
       (swap! state 
              assoc 
-             :aircraft {9001 {:callsign "ACA9001"}}
+             :aircraft {9001 {:callsign "ACA9001"}
+                        42 {:callsign "ACA42"}}
              :selected 9001)
       (set-active! state 42)
       (send-chat! state "Test")
@@ -102,7 +107,8 @@
              :aircraft {9001 {:callsign "ACA9001"}})
       (receive-from-private state 9001 "Test")
       (is (= "ACA9001: Test" (:text (last-output state))))
-      (is (= 9001 (:with (last-output state))))))
+      (is (= 9001 (:with (last-output state))))
+      (is (= "<ACA9001> ACA9001: Test" (:text (last-shown state))))))
   (testing "Receive private when filtered"
     (let [state (new-radar)]
       (do-connect! state)
@@ -112,7 +118,8 @@
       (set-active! state 9001)
       (receive-from-private state 9001 "Test")
       (is (= "ACA9001: Test" (:text (last-output state))))
-      (is (= 9001 (:with (last-output state)))))))
+      (is (= 9001 (:with (last-output state))))
+      (is (= "ACA9001: Test" (:text (last-shown state)))))))
 
 (deftest receive-public-test
   (testing "Receive global chat"

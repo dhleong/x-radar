@@ -103,7 +103,7 @@
 
 (deftest buffer-swapping-test
   (let [state (atom (create-output-buffers))]
-    (append-output state "Private" :with 42)
+    (append-output state "Private" :with 42 :with-label "PL")
     (append-output state "Global")
     (testing "Filter to private with CID"
       (set-active! state 42)
@@ -115,7 +115,7 @@
       (is (= :global (:current-output @state)))
       (is (= 2 (buffer-count state)))
       (is (= "Global" (-> (get-active-buffer @state) first :text)))
-      (is (= "Private" (-> (get-active-buffer @state) second :text))))
+      (is (= "<PL> Private" (-> (get-active-buffer @state) second :text))))
     (testing "New CID doesn't break"
       (set-active! state 9001)
       (is (= 9001 (:current-output @state)))

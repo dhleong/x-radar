@@ -16,19 +16,32 @@
 ;; eg: `[00:00:00] ` but as all spaces
 (def multi-line-prefix "           ")
 
+(defn- prefix-with
+  "Prefix an output line as appropriate
+  if it is 'with' someone 
+  (IE: it's a private message)"
+  [line]
+  (if-let [with-label (:with-label line)]
+    (assoc line 
+           :text (str "<" with-label "> " (:text line)))
+    line))
+
 (defn append-output
-  "Append a line of output"
-  [state text & {:keys [color with]}]
+  "Append a line of output.
+  If you provide an id in :with, you MUST
+  provide the label to display in :with-label"
+  [state text & {:keys [color with with-label] :as opts}]
+  {:pre [(or (every? nil? [with with-label])
+             (every? (complement nil?) [with with-label]))]}
   (let [output (:output-buffer @state)]
     (swap! output 
            (fn [buf new-entry] 
              (cons new-entry buf))
-           {:text text
-            :time (l/format-local-time 
-                    (l/local-now) 
-                    :hour-minute-second)
-            :color color
-            :with with}))
+           (assoc opts
+                  :text text
+                  :time (l/format-local-time 
+                          (l/local-now) 
+                          :hour-minute-second))))
   (redraw state))
 
 (defn get-active-buffer
@@ -41,7 +54,7 @@
   (let [current (:current-output radar)
         raw @(:output-buffer radar)]
     (if (= :global current)
-      raw
+      (map prefix-with raw)
       (filter #(= current (:with %)) raw))))
 
 (defn buffer-count

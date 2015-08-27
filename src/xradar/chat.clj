@@ -115,7 +115,8 @@
   "Call when a private chat is received"
   [state cid message]
   (append-incoming state cid message
-                   :with cid))
+                   :with cid
+                   :with-label (:callsign (object-for state cid))))
 
 (defn receive-from
   "Call when a public chat is received"
