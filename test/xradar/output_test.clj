@@ -6,13 +6,16 @@
   {:text "Test"
    :time "00:00:00"})
 
+(def single-line-result
+  [{:text "[00:00:00] Test" :time "00:00:00"}])
+
 (def multi-line-entry 
   {:text "Testing..."
    :time "00:00:00"})
 
 (def multi-line-result
-  [{:text "           ng..." :color nil}
-   {:text "[00:00:00] Testi" :color nil}])
+  [{:text "           ng..." :time "00:00:00"}
+   {:text "[00:00:00] Testi" :time "00:00:00"}])
 
 (def chars-per-line (+ 5 (count "[00:00:00] ")))
 
@@ -25,7 +28,7 @@
 (deftest format-text-test
   (testing "Format single line"
     (let [formatted (format-text chars-per-line single-line-entry)]
-      (is (= [{:text "[00:00:00] Test" :color nil}] formatted))))
+      (is (= single-line-result formatted))))
   (testing "Format multi-line"
     (let [formatted (format-text chars-per-line multi-line-entry)]
       (is (= multi-line-result formatted)))))

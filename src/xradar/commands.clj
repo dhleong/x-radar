@@ -227,6 +227,14 @@
            (doecho "Error: " (.getMessage e))))))))
 
 ;;
+;; Selection mode
+;;
+(defn start-select
+  [machine state & args]
+  (apply sm/start machine state args))
+
+
+;;
 ;; Output navigation
 ;;
 
@@ -326,14 +334,6 @@
   [machine state]
   (commit-profile state)
   (doecho "Settings written to disk."))
-
-;;
-;; Selection mode
-;;
-
-(defn start-select
-  [machine state & args]
-  (apply sm/start machine state args))
 
 ;;
 ;; Window toggling
