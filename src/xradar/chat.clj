@@ -88,7 +88,8 @@
       ;; are we even connected?
       (not is-connected?)
       (append-output state "ERR: Not Connected"
-                     :color :error)
+                     :color :error
+                     :flag :status)
       ;; output filtered?
       (not= :global output-filter)
       (let [craft (object-for state output-filter)]

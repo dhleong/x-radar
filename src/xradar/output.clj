@@ -30,7 +30,7 @@
   "Append a line of output.
   If you provide an id in :with, you MUST
   provide the label to display in :with-label"
-  [state text & {:keys [color with with-label] :as opts}]
+  [state text & {:keys [color flag with with-label] :as opts}]
   {:pre [(or (every? nil? [with with-label])
              (every? (complement nil?) [with with-label]))]}
   (let [output (:output-buffer @state)]
@@ -55,7 +55,10 @@
         raw @(:output-buffer radar)]
     (if (= :global current)
       (map prefix-with raw)
-      (filter #(= current (:with %)) raw))))
+      (filter #(or 
+                 (= current (:with %))
+                 (= :status (:flag %))) 
+              raw))))
 
 (defn buffer-count
   [state]

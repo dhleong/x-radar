@@ -18,7 +18,7 @@
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
                               get-controllers push-strip!]]
-             [output :refer [append-output buffer-count]]
+             [output :refer [append-output buffer-count set-active!]]
              [profile :refer [commit-profile]]
              [radar-util :refer [get-location redraw]]
              [scene :refer [find-point]]
@@ -273,6 +273,52 @@
   (to-mode :normal))
 
 ;;
+;; Chat commands
+;;
+
+(defmulti toggle-private-chat
+  "Open a private chat. Pass :pilot to open
+  selections for a pilot, :controller to open for
+  a controller, or a cid to open directly with that id."
+  (fn [machine state arg]
+    arg))
+(defmethod toggle-private-chat :pilot 
+  [machine state _]
+  (let [targets (vals (:aircraft @state))]
+    (start-select machine state
+                  :items targets
+                  :prompt "Chat with pilot:"
+                  :to-string #(:callsign %)
+                  :on-cancel 'cancel-toggle-chat
+                  :on-select 'toggle-private-chat)))
+(defmethod toggle-private-chat :controller
+  [machine state _]
+  (let [targets (get-controllers (:network @state))]
+    (start-select machine state
+                  :items targets
+                  :prompt "Chat with controller:"
+                  :to-string #(:callsign %)
+                  :on-cancel 'cancel-toggle-chat
+                  :on-select 'toggle-private-chat)))
+(defmethod toggle-private-chat :default
+  [machine state cid-or-object]
+  (let [cid (if (map? cid-or-object)
+              (:cid cid-or-object)
+              cid-or-object)]
+    (set-active! state cid)
+    (to-mode :normal)))
+
+(defn toggle-combined-chat
+  "Leave a private chat and show all chats combined"
+  [machine state]
+  (set-active! state :global)
+  (to-mode :normal))
+
+(defn cancel-toggle-chat
+  [machine state]
+  (to-mode :normal))
+
+;;
 ;; Data management
 ;;
 
@@ -318,7 +364,9 @@
                     s/pack!
                     s/show!))
          (disconnect! network)
-         (append-output state "Disconnected." :color :warning)
+         (append-output state "Disconnected." 
+                        :color :warning
+                        :flag :status)
          machine)
        ;; not connected! go ahead
        (open-connection
@@ -327,13 +375,16 @@
    ;; just reset the mode
    (to-mode :normal))
   ([machine state params]
-   (append-output state "Connecting...")
+   (append-output state "Connecting..."
+                  :flag :status)
    (connect! (:network @state) 
              (assoc params
                     :on-fail #(append-output state "Failed to connect."
-                                             :color :warning)
+                                             :color :warning
+                                             :flag :status)
                     :on-connect #(append-output state "Connected!"
-                                                :color :success)))
+                                                :color :success
+                                                :flag :status)))
    machine))
 
 ;;
