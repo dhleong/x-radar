@@ -7,7 +7,7 @@
             [quil.core :as q]
             [xradar
              [radar-util :refer [redraw]]
-             [util :refer [with-alpha]]]))
+             [util :refer [object-for with-alpha]]]))
 
 (def output-padding 10)
 (def output-size 14)
@@ -16,19 +16,83 @@
 ;; eg: `[00:00:00] ` but as all spaces
 (def multi-line-prefix "           ")
 
+(defn- prefix-with
+  "Prefix an output line as appropriate
+  if it is 'with' someone 
+  (IE: it's a private message)"
+  [line]
+  (if-let [with-label (:with-label line)]
+    (assoc line 
+           :text (str "<" with-label "> " (:text line)))
+    line))
+
 (defn append-output
-  "Append a line of output"
-  [radar text & {:keys [color]}]
-  (let [output (:output-buffer @radar)]
+  "Append a line of output.
+  If you provide an id in :with, you MUST
+  provide the label to display in :with-label"
+  [state text & {:keys [color flag with with-label] :as opts}]
+  {:pre [(or (every? nil? [with with-label])
+             (every? (complement nil?) [with with-label]))]}
+  (let [output (:output-buffer @state)]
     (swap! output 
            (fn [buf new-entry] 
              (cons new-entry buf))
-           {:text text
-            :time (l/format-local-time 
-                    (l/local-now) 
-                    :hour-minute-second)
-            :color color})
-    (redraw radar)))
+           (assoc opts
+                  :text text
+                  :time (l/format-local-time 
+                          (l/local-now) 
+                          :hour-minute-second))))
+  (redraw state))
+
+(defn get-active-buffer
+  "Return the active buffer as a vector.
+  NOTE that it expects the radar MAP, NOT
+  the state ATOM (like draw-output). 
+  Public for testing purposes; you shouldn't
+  need to access the output buffer directly."
+  [radar]
+  (let [current (:current-output radar)
+        raw @(:output-buffer radar)]
+    (if (= :global current)
+      (map prefix-with raw)
+      (filter #(or 
+                 (= current (:with %))
+                 (= :status (:flag %))) 
+              raw))))
+
+(defn buffer-count
+  [state]
+  (count (get-active-buffer @state)))
+
+(defn create-output-buffers
+  []
+  {:output-buffer (atom [])
+   :current-output :global
+   :pending-messages (atom 0)})
+
+(defn get-active
+  "Returns the pilot/controller object of the 
+  currently active chat, or :global if viewing 
+  global chat."
+  [state]
+  (let [current (if (map? state)
+                  (:current-output state)
+                  (:current-output @state))]
+    (if (= :global current)
+      :global
+      (object-for state current))))
+
+(defn set-active!
+  "Set the currently active chat. Either pass a cid
+  of a pilot or controller to filter to, or :global
+  to show all chats together"
+  [state cid-or-global]
+  (swap! state 
+         assoc 
+         :current-output cid-or-global
+         :output-scroll 0)  ; reset the scroll on switch, I guess
+  (when (= :global cid-or-global)
+    (swap! (:pending-messages @state) (constantly 0))))
 
 (defn format-text
   "Splits text into multiple lines as necessary"
@@ -38,16 +102,16 @@
                                 (count multi-line-prefix))
                              (:text line))
         time-text (str "[" (:time line) "] ") 
-        time-line {:color color
-                   :text (str time-text
-                              (apply str (first lines)))}
+        time-line (assoc line
+                         :text (str time-text
+                                    (apply str (first lines))))
         other-lines (rest lines)]
       (-> (cons 
             time-line
             (map
               (fn [text]
-                {:color color
-                 :text (apply str multi-line-prefix text)})
+                (assoc line 
+                       :text (apply str multi-line-prefix text)))
               other-lines))
           reverse)))
 
@@ -81,9 +145,12 @@
 (defn resolve-color
   "Resolve the color to use to render the line.
   Public mostly for testing"
-  [scheme line]
+  [scheme current-output line]
   (let [color (:color line)]
     (cond
+      (and 
+        (= :global current-output)
+        (not (nil? (:with line)))) (-> scheme :output :private)
       (keyword? color) (-> scheme :output color)
       (integer? color) color 
       :else (-> scheme :output :text))))
@@ -94,12 +161,19 @@
   (q/text-align :left)
   (q/rect-mode :corner)
   (let [scheme (-> radar :profile :scheme)
+        active-chat (get-active radar)
+        pending @(:pending-messages radar)
         max-output-count (-> radar :profile :output-size)
-        max-output (* output-size max-output-count)
+        text-height (+ (q/text-descent) (q/text-ascent))
+        max-output (* text-height max-output-count)
         char-width (q/text-width "M")
-        available-width (- (q/width) output-padding output-padding)
+        base-available-width (- (q/width) output-padding output-padding)
+        available-width (if (= :global active-chat)
+                          base-available-width
+                          (- base-available-width output-size output-padding)) 
+        upper-left-y (- output-padding max-output)
         chars-per-line (int (Math/floor (/ available-width char-width)))
-        output-buffer @(:output-buffer radar)
+        output-buffer (get-active-buffer radar)
         output-scroll (:output-scroll radar)
         ;; scroll bar stuff
         [scroll-start-perc scroll-length-perc] 
@@ -111,14 +185,42 @@
     (with-alpha q/fill-int (-> scheme :output :background))
     (q/no-stroke)
     (q/rect output-padding 
-            (- output-padding
-               max-output)
-            available-width
+            upper-left-y
+            base-available-width
             max-output)
+    (when (> pending 0)
+      (let [pending-text (str pending " pending")]
+        (q/push-style)
+        (q/with-translation [output-padding upper-left-y]
+          (q/stroke-int (-> scheme :output :text))
+          (q/line 0
+                  0
+                  base-available-width
+                  0)
+          (q/rect 0
+                  (- text-height)
+                  (+ (q/text-width pending-text)
+                     output-padding
+                     output-padding)
+                  text-height)
+          (q/fill-int (-> scheme :output :outgoing))
+          (q/text pending-text output-padding (- (q/text-descent))))
+        (q/pop-style)))
+    (q/push-matrix)
+    (when (not= :global active-chat)
+      ;; private chat mode!
+      (q/with-rotation [(/ Math/PI -2)]
+        (q/fill-int (-> scheme :output :text))
+        (q/text (or (:callsign active-chat) "???")
+                0
+                (+ output-padding output-size)))
+      ;; offset everything else
+      (q/translate (+ output-size output-padding) 0))
     ;; scroll bar!
-    (when (> 0 scroll-length)
+    (when (> (int scroll-length) 0)
       (q/with-translation [(- available-width 
-                              scrollbar-width) 0]
+                              scrollbar-width) 
+                           output-padding]
         (q/no-stroke)
         (q/fill-int (-> scheme :output :text))
         (q/rect 0 (- scroll-start)
@@ -137,10 +239,13 @@
            offset 0]
       (when (seq output)
         (let [line (first output)]
-          (q/fill-int (resolve-color scheme line))
+          (q/fill-int (resolve-color scheme 
+                                     (:current-output radar) 
+                                     line))
           (q/text (:text line) 
                   output-padding 
                   (- offset)))
         (when (< offset max-output)
           (recur (rest output)
-                 (+ offset output-size)))))))
+                 (+ offset output-size)))))
+    (q/pop-matrix)))

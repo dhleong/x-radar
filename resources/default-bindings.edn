@@ -33,6 +33,19 @@
 #map/normal/ov toggle-voice-config
 #map/normal/oc connect
 
+;; Private Chats
+; "Goto Pilot Chat"
+#map/normal/gpc (toggle-private-chat :pilot)
+; "Goto Controller Chat"
+#map/normal/gcc (toggle-private-chat :controller)
+; "Goto All Chats"
+#map/normal/gac toggle-combined-chat
+
+;; NB we may use lower-c as "select and enter insert"
+#map/normal/C toggle-selected-chat
+#map/normal/r reply-private-chat
+#map/normal/R prompt-reply-private-chat
+
 ;;
 ;; Flight Strip mode ("strips")
 ;;

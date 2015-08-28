@@ -36,6 +36,9 @@
     Info is itself a map containing:
     {:ip 'IP address'
      :location 'New York, USA'}")
+  (my-callsign
+    [this]
+    "Return the callsign we connected as")
   (push-strip!
     [this controller-id aircraft]
     "Push a flight strip to the controller with

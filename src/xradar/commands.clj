@@ -11,13 +11,15 @@
             [quil.core :as q]
             [seesaw.core :as s]
             [xradar
+             [chat :refer [send-chat!]]
              [connection-config :refer [open-connection]]
              [flight-plan :refer [open-flight-plan]]
              [flight-strips :as fs]
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
-                              get-controllers push-strip! send! send-to!]]
-             [output :refer [append-output]]
+                              get-controllers push-strip!]]
+             [output :refer [append-output buffer-count 
+                             get-active get-active-buffer set-active!]]
              [profile :refer [commit-profile]]
              [radar-util :refer [get-location redraw]]
              [scene :refer [find-point]]
@@ -38,24 +40,13 @@
 (def move-distance 10)
 (def zoom-distance 50)
 
-(def submits 0)
+;; candidates for prompt-reply-private-chat will be taken
+;;  from this many recent output lines
+(def prompt-reply-limit 15)
 
 (defn- default-input-submit
   [machine state message]
-  (try
-    (def submits (inc submits))
-    (let [network (:network @state)] 
-      (if-let [selected (:selected @state)]
-        (let [craft (get (:aircraft @state) selected {:callsign selected})]
-          (append-output state (str (:callsign craft) ", " message)
-                         :color :outgoing)
-          (send-to! network selected message))
-        (do
-          (append-output state message
-                         :color :outgoing)
-          (send! network message))))
-    (catch Throwable e
-      (def last-exc e))))
+  (send-chat! state message))
 
 ;;
 ;; Util methods and macros
@@ -157,6 +148,7 @@
     (let [{:keys [x y]} (get-location state)
           selected-id (:selected @state)
           selected (get (:aircraft @state) selected-id nil)
+          active-chat (get-active state)
           ;; NB don't change modes if we have a custom on-submit.
           ;; Especially since we're using native input...
           moded (if on-submit
@@ -165,7 +157,10 @@
           my-prompt 
           (cond
             (string? prompt) prompt
-            (not (nil? selected)) (str ">" (:callsign selected))
+            (and
+              (= :global active-chat)
+              (not (nil? selected))) (str ">" (:callsign selected))
+            (not= :global active-chat) (str ">" (:callsign active-chat))
             :else nil)
           submit-handler (or on-submit default-input-submit)]
       (assoc moded
@@ -239,22 +234,30 @@
            (doecho "Error: " (.getMessage e))))))))
 
 ;;
+;; Selection mode
+;;
+(defn start-select
+  [machine state & args]
+  (apply sm/start machine state args))
+
+
+;;
 ;; Output navigation
 ;;
 
 (defn output-scroll
   [machine state amount]
   (swap! state 
-         #(let [outputs (count @(:output-buffer @state))
-                output-size (-> @state :profile :output-size)
+         #(let [outputs (buffer-count state)
+                output-size (-> % :profile :output-size)
                 last-scroll (:output-scroll %)
                 new-scroll (+ amount last-scroll)
                 adjusted (-> new-scroll
-                             (max 0)
-                             (min (- outputs output-size)))]
+                             (min (- outputs output-size))
+                             (max 0))]
             (assoc % :output-scroll adjusted)))
-  ;; no change in machine
-  machine)
+  ;; no change in machine besides resetting sequence
+  (to-mode :normal))
 
 ;;
 ;; Aircraft selection
@@ -285,21 +288,117 @@
   (to-mode :normal))
 
 ;;
+;; Chat commands
+;;
+
+(defn cancel-toggle-chat
+  [machine state]
+  (to-mode :normal))
+
+(defmulti toggle-private-chat
+  "Open a private chat. Pass :pilot to open
+  selections for a pilot, :controller to open for
+  a controller, or a cid to open directly with that id."
+  (fn [machine state arg]
+    arg))
+(defmethod toggle-private-chat :pilot 
+  [machine state _]
+  (let [targets (vals (:aircraft @state))]
+    (start-select machine state
+                  :items targets
+                  :prompt "Chat with pilot:"
+                  :to-string #(:callsign %)
+                  :on-cancel 'cancel-toggle-chat
+                  :on-select 'toggle-private-chat)))
+(defmethod toggle-private-chat :controller
+  [machine state _]
+  (let [targets (get-controllers (:network @state))]
+    (start-select machine state
+                  :items targets
+                  :prompt "Chat with controller:"
+                  :to-string #(:callsign %)
+                  :on-cancel 'cancel-toggle-chat
+                  :on-select 'toggle-private-chat)))
+(defmethod toggle-private-chat :default
+  [machine state cid-or-object]
+  (let [cid (if (map? cid-or-object)
+              (:cid cid-or-object)
+              cid-or-object)]
+    (def setting-active cid)
+    (set-active! state cid)
+    (to-mode :normal)))
+
+(defn toggle-combined-chat
+  "Leave a private chat and show all chats combined"
+  [machine state]
+  (set-active! state :global)
+  (to-mode :normal))
+
+(defn toggle-selected-chat
+  "Switch between a private chat with the selected
+  aircraft and the global chat."
+  [machine state]
+  (let [chat-target (get-active state)
+        selected (:selected @state)]
+    (def mytarget chat-target)
+    (def mysel selected)
+    (cond
+      (nil? selected)
+      (notify-mode :normal "You must select an aircraft")
+      (= :global chat-target)
+      (toggle-private-chat machine state selected)
+      :else (toggle-combined-chat machine state))))
+
+(defn reply-private-chat
+  "Reply to the most recently received private chat message
+  within the current context. That is, when already filtered
+  to a private chat, this will do the same as start-insert.
+  You will be left in filtered private chat mode."
+  [machine state]
+  (when (= :global (get-active state))
+    (when-let [first-private (->> (get-active-buffer @state)
+                             (filter #(not (nil? (:with %))))
+                             first)]
+      (set-active! state (:with first-private))))
+  (start-insert machine state))
+
+(defn prompt-reply-private-chat
+  "Reply to a received private chat message. You will 
+  be prompted to choose the recipient even if already
+  filtered to a private chat. This command is different 
+  from toggle-private-chat in that the candidates are
+  only those with whom you've received or to whom you've
+  sent a private chat message recently."
+  ([machine state]
+   (let [targets (->> @(:output-buffer @state)
+                      (take prompt-reply-limit)
+                      (filter #(not (nil? (:with %))))
+                      (map #(select-keys % [:with :with-label]))
+                      distinct)]
+     (if (seq targets)
+       (start-select machine state
+                     :items targets
+                     :prompt "Reply to:"
+                     :to-string #(:with-label %)
+                     :on-cancel 'cancel-toggle-chat
+                     :on-select 'prompt-reply-private-chat)
+       (doecho "Nobody to reply to recently"))))
+  ([machine state cid-or-line]
+   (let [cid (if (map? cid-or-line)
+               (:with cid-or-line)
+               cid-or-line)]
+     (set-active! state cid)
+     (start-insert machine state))))
+
+;;
 ;; Data management
 ;;
 
 (defn commit
+  "Write updated settings file to disk."
   [machine state]
   (commit-profile state)
   (doecho "Settings written to disk."))
-
-;;
-;; Selection mode
-;;
-
-(defn start-select
-  [machine state & args]
-  (apply sm/start machine state args))
 
 ;;
 ;; Window toggling
@@ -330,7 +429,9 @@
                     s/pack!
                     s/show!))
          (disconnect! network)
-         (append-output state "Disconnected." :color :warning)
+         (append-output state "Disconnected." 
+                        :color :warning
+                        :flag :status)
          machine)
        ;; not connected! go ahead
        (open-connection
@@ -339,13 +440,16 @@
    ;; just reset the mode
    (to-mode :normal))
   ([machine state params]
-   (append-output state "Connecting...")
+   (append-output state "Connecting..."
+                  :flag :status)
    (connect! (:network @state) 
              (assoc params
                     :on-fail #(append-output state "Failed to connect."
-                                             :color :warning)
+                                             :color :warning
+                                             :flag :status)
                     :on-connect #(append-output state "Connected!"
-                                                :color :success)))
+                                                :color :success
+                                                :flag :status)))
    machine))
 
 ;;

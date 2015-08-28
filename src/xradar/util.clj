@@ -6,11 +6,23 @@
              [bind :as b]
              [core :as s]]
             [clojure.core.matrix :refer [matrix inner-product set-current-implementation]]
-            [xradar.scene :refer [get-center get-lon-scale loaded?]]))
+            [xradar
+             [network :refer [get-controllers]]
+             [scene :refer [get-center get-lon-scale loaded?]]]))
 
 (set-current-implementation :vectorz) 
 
 (def coord-scale 10000)
+
+
+(defn- cid-to-controller
+  [radar cid]
+  (let [network (:network radar)
+        controllers (get-controllers network)]
+    (->> controllers
+        (filter #(= cid (:cid %)))
+        first)))
+
 
 (defn when-all-set-enabled
   "When all views with provided ids match
@@ -77,6 +89,17 @@
        %)
     coll))
 
+(defn object-for
+  "Returns the pilot/controller object of the 
+  given cid"
+  [state cid]
+  (let [radar (if (map? state)
+                state
+                @state)]
+    (get-in radar
+            [:aircraft cid]
+            ;; try controller
+            (cid-to-controller radar cid))))
 
 ;;
 ;; Wacky hacks
