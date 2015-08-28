@@ -33,10 +33,6 @@
 ;; Constants
 ;;
 
-;; whether to use the native input instead of our
-;;  custom-drawn one. For now, native is preferred
-(def use-native-input true)
-
 (def move-distance 10)
 (def zoom-distance 50)
 
@@ -54,9 +50,6 @@
 ;;
 ;; Util methods and macros
 ;;
-
-(defn set-use-native-input! [do-use]
-  (def use-native-input do-use))
 
 (defn switch-mode
   [machine state new-mode]
@@ -146,74 +139,50 @@
   `cancel-mode` should be the keyword for a mode to return
   to on cancel. If not provided, defaults to `:normal`"
   [machine state & {:keys [history prompt on-submit cancel-mode]}]
-  (if use-native-input
-    ;; build our input dialog
-    (let [{:keys [x y]} (get-location state)
-          selected-id (:selected @state)
-          selected (get (:aircraft @state) selected-id nil)
-          active-chat (get-active state)
-          ;; NB don't change modes if we have a custom on-submit.
-          ;; Especially since we're using native input...
-          moded (if on-submit
-                  machine
-                  (to-mode :insert))
-          my-prompt 
-          (cond
-            (string? prompt) prompt
-            (and
-              (= :global active-chat)
-              (not (nil? selected))) (str ">" (:callsign selected))
-            (not= :global active-chat) (str ">" (:callsign active-chat))
-            :else nil)
-          submit-handler (or on-submit default-input-submit)]
-      (assoc moded
-             :insert-box 
-             (create-insert 
-               x 
-               (+ y (q/height) (- input-height)) 
-               (q/width)
-               :prompt my-prompt
-               :history (or history @(:history-insert @state))
-               :on-cancel #(with-machine (to-mode (or cancel-mode :normal)))
-               :on-submit 
-               #(let [result (submit-handler machine state %)
-                      new-machine
-                      (if (:mode result)
-                        result
-                        (-> (to-mode :normal)))]
-                  (with-machine (deep-merge machine new-machine))
-                  (redraw state)))))
-    ;; just the unfinished, custom input handling
-    (to-mode :insert)))
+  (let [{:keys [x y]} (get-location state)
+        selected-id (:selected @state)
+        selected (get (:aircraft @state) selected-id nil)
+        active-chat (get-active state)
+        ;; NB don't change modes if we have a custom on-submit.
+        ;; Especially since we're using native input...
+        moded (if on-submit
+                machine
+                (to-mode :insert))
+        my-prompt 
+        (cond
+          (string? prompt) prompt
+          (and
+            (= :global active-chat)
+            (not (nil? selected))) (str ">" (:callsign selected))
+          (not= :global active-chat) (str ">" (:callsign active-chat))
+          :else nil)
+        submit-handler (or on-submit default-input-submit)]
+    (assoc moded
+           :insert-box 
+           (create-insert 
+             x 
+             (+ y (q/height) (- input-height)) 
+             (q/width)
+             :prompt my-prompt
+             :history (or history @(:history-insert @state))
+             :on-cancel #(with-machine (to-mode (or cancel-mode :normal)))
+             :on-submit 
+             #(let [result (submit-handler machine state %)
+                    new-machine
+                    (if (:mode result)
+                      result
+                      (-> (to-mode :normal)))]
+                (with-machine (deep-merge machine new-machine))
+                (redraw state))))))
 
 (defn stop-insert
   [machine state]
-  ;; TODO clean up state
   (if (= :normal (:mode machine))
     ;; if this is called when already in normal mode,
     ;;  we clear the selected aircraft
     (swap! state #(assoc % :selected nil)))
   (assoc (to-mode :normal)
          :insert-buffer []))
-
-(defn handle-insert
-  [machine state]
-  ;; FIXME
-  (let [last-press (-> machine :last-press)]
-    (case (:raw-key last-press)
-      \backspace 
-      (assoc machine
-             :insert-buffer
-             (drop-last (:insert-buffer machine)))
-      \newline
-      (let [buffer (str (:insert-buffer machine))]
-        ;; TODO do something with buffer
-        (stop-insert machine state))
-      ;; default; append
-      (assoc machine
-           :insert-buffer
-           (concat (:insert-buffer machine)
-                   [(:raw-key last-press)])))))
 
 ;;
 ;; Command Mode

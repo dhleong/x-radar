@@ -1,11 +1,7 @@
 (ns xradar.input-test
   (:refer-clojure :exclude [empty])
   (:require [clojure.test :refer :all]
-            [xradar
-             [commands :refer [set-use-native-input!]]
-             [input :refer :all]]))
-
-(set-use-native-input! false)
+            [xradar.input :refer :all]))
 
 (defn empty [] @(create-input {}))
 (defn- with-mods [& mods]
@@ -43,21 +39,21 @@
       (is (= {:key :alt-cmd-ctrl-L :key-code 76} translated)))))
 
 (deftest process-press-test
-  (testing "Start insert"
-    (let [original (empty) 
-          state (atom {})
-          machine (process-press original {:key :i :key-code 73} state)]
-      (is (= :insert (:mode machine)))))
+  (testing "Handle scroll"
+    (let [original (with-mods :control) 
+          state (atom {:current-output :global
+                       :output-buffer (atom [1 2 3])
+                       :profile {:output-size 1}
+                       :output-scroll 0})
+          machine (process-press original 
+                                 {:key :b :key-code 66} 
+                                 state)]
+      (is (= 1 (:output-scroll @state)))
+      ;; we should be where we expect to be
+      (is (contains? (:current-bindings machine) :ctrl-b))))
   (testing "Multi-key map"
     (let [original (empty)
           state (atom {})
           machine (process-press original {:key :o :key-code 79} state)]
-      (is (contains? (:current-bindings machine) :f))))
-  (testing "Insert text"
-    (let [original {:mode :insert 
-                    :insert-buffer [] 
-                    :last-press {:key :h :raw-key \h}}
-          state (atom {})
-          machine (pressed-in-mode original state)]
-      (is (= [\h] (:insert-buffer machine))))))
+      (is (contains? (:current-bindings machine) :f)))))
 

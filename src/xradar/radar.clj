@@ -6,7 +6,6 @@
              [core :as q] 
              [middleware :as qm]]
             [xradar
-             [commands :refer [use-native-input]]
              [input :refer [create-input describe-input 
                             process-input-press process-input-release
                             reset-modifiers!]]
@@ -149,28 +148,10 @@
               bar-padding 
               (- (q/height) bar-padding)))
     (case input-mode
-      ;; insert mode; draw the input buffer
-      :insert
-      (when-not use-native-input
-        (let [l (+ bar-padding (q/text-width "XXX1234") bar-padding)
-             b (- (q/height) bar-padding)]
-         ;; draw the text
-         (q/text-size bar-text-size)
-         (q/fill-int (-> scheme :input :text))
-         (q/text (apply str (:insert-buffer input)) l b)
-         ;; draw the box
-         (q/stroke-int (-> scheme :input :box))
-         (q/rect-mode :corners)
-         (q/no-fill)
-         (q/rect (- l (/ bar-padding 2)) 
-                 (- (q/height) bar-text-size bar-padding) 
-                 (- (q/width) bar-padding)
-                 (+ b (q/text-descent)))))
       ;; flight strips mode
-      :strips
-      (render-strip-bay radar)
-      :select
-      (render-selections radar)
+      :strips (render-strip-bay radar)
+      ;; selection mode
+      :select (render-selections radar)
       ;; default; do nothing
       nil)
     (when-let [echo (:last-echo input)]

@@ -34,13 +34,6 @@
        ~'machine)))
 
 (defmulti pressed-in-mode (fn [machine state] (:mode machine)))
-(defmethod pressed-in-mode :insert
-  [machine state]
-  (exec-press
-    :esc c/stop-insert
-    ;; default handler
-    c/handle-insert))
-;
 (defmethod pressed-in-mode :normal
   [machine state]
   (exec-press
