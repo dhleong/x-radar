@@ -8,6 +8,7 @@
              [output :refer [append-output]]
              [network :refer [connected? get-controllers 
                               my-callsign send! send-to!]]
+             [radar-util :refer [request-attention!]]
              [util :refer [object-for with-alpha]]]))
 
 
@@ -30,6 +31,7 @@
          state 
          (prefix-incoming state cid message) 
          parts)
+  (request-attention!)
   (let [{:keys [with]} parts
         chat-target (:current-output @state)]
     (when (and
