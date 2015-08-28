@@ -12,32 +12,57 @@
   [on-submit on-cancel key-event]
   (def last-event key-event)
   (def last-event-code (.getKeyCode key-event))
-  (case (.getKeyCode key-event)
-    ;; enter; submit the text
-    10 (let [content (.trim (s/value (s/to-widget key-event)))]
-         (-> (s/to-root key-event)
-             s/dispose!)
-         (if (empty? content)
-           (on-cancel)
-           (on-submit content)))
-    ;; esc; dispose the window
-    27 (do
-         (-> (s/to-root key-event)
-             s/dispose!)
-         (on-cancel))
-    ;; anything else, do nothing
-    false))
+  (let [root (s/to-root key-event)
+        input (s/select root [:#input])
+        {:keys [scrollback history]} 
+         (s/user-data input)]
+    (case (.getKeyCode key-event)
+      ;; enter; submit the text
+      10 (let [content (.trim (s/value (s/to-widget key-event)))]
+           (-> root
+               s/dispose!)
+           (if (empty? content)
+             (on-cancel)
+             (on-submit content)))
+      ;; esc; dispose the window
+      27 (do
+           (-> root
+               s/dispose!)
+           (on-cancel))
+      ;; up-arrow; history scroll-back
+      38 (when (and
+                 (seq history)
+                 (< (inc @scrollback) (count history)))
+           (let [new-idx (swap! scrollback inc)]
+             (s/value! input (nth history new-idx))))
+      ;; down-arrow; history scroll-forward
+      40 (when (and
+                 (seq history)
+                 (>= @scrollback 0))
+           (let [new-idx (swap! scrollback dec)]
+             (def last-idx new-idx)
+             (s/value! input 
+                       (if (< new-idx 0)
+                         ""
+                         (nth history new-idx)))))
+      ;; anything else, do nothing
+      false)))
 
 (defn create-insert
   "Create the insert mode box,
   with the given callbacks"
-  [x y w & {:keys [prompt on-submit on-cancel]}]
+  [x y w & {:keys [prompt history on-submit on-cancel]}]
   {:pre [(function? on-submit) (function? on-cancel)]}
   (let [input 
         (s/text 
           :id :input
+          :user-data {:scrollback (atom -1)
+                      :history history}
           :listen 
-          [:key-pressed #(key-handler on-submit on-cancel %)])
+          [:key-pressed #(try
+                           (key-handler on-submit on-cancel %)
+                           (catch Exception e
+                             (def last-exc e)))])
         contents
         (if (string? prompt)
           (mig-panel

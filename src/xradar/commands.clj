@@ -46,6 +46,9 @@
 
 (defn- default-input-submit
   [machine state message]
+  (swap! (:history-insert @state) 
+         (fn [history]
+           (cons message history)))
   (send-chat! state message))
 
 ;;
@@ -142,7 +145,7 @@
   a switch into :normal mode
   `cancel-mode` should be the keyword for a mode to return
   to on cancel. If not provided, defaults to `:normal`"
-  [machine state & {:keys [prompt on-submit cancel-mode]}]
+  [machine state & {:keys [history prompt on-submit cancel-mode]}]
   (if use-native-input
     ;; build our input dialog
     (let [{:keys [x y]} (get-location state)
@@ -170,6 +173,7 @@
                (+ y (q/height) (- input-height)) 
                (q/width)
                :prompt my-prompt
+               :history (or history @(:history-insert @state))
                :on-cancel #(with-machine (to-mode (or cancel-mode :normal)))
                :on-submit 
                #(let [result (submit-handler machine state %)
@@ -219,6 +223,7 @@
   ([machine state]
    (start-insert machine state
                  :prompt " :"
+                 :history @(:history-command @state)
                  :on-submit start-command))
   ([machine state raw-command]
    (when-let [trimmed (.trim raw-command)]
@@ -229,6 +234,9 @@
              trimmed)
            parsed (edn/read-string input)]
        (try
+         (swap! (:history-command @state) 
+                (fn [history]
+                  (cons input history)))
          (eval-command machine state parsed)
          (catch Exception e
            (doecho "Error: " (.getMessage e))))))))
@@ -460,6 +468,7 @@
   ([machine state]
    (start-insert machine state 
                  :prompt "Center On:"
+                 :history []
                  :on-submit center-view))
   ([machine state point-name]
    (if-let [point
@@ -532,6 +541,7 @@
   ([machine state]
    (start-insert machine state 
                  :prompt "Separator label:"
+                 :history []
                  :cancel-mode :strips
                  :on-submit add-strip-separator))
   ([machine state label]

@@ -240,7 +240,9 @@
          (satisfies? XScene scene)]}
   (let [profile (fill-profile raw-profile)
         state (atom (deep-merge
-                      {:profile profile
+                      {:history-command (atom [])
+                       :history-insert (atom [])
+                       :profile profile
                        :network network
                        :output-scroll 0
                        :scene scene
