@@ -19,7 +19,7 @@
              [network :refer [connect! connected? disconnect!
                               get-controllers push-strip!]]
              [output :refer [append-output buffer-count 
-                             get-active set-active!]]
+                             get-active get-active-buffer set-active!]]
              [profile :refer [commit-profile]]
              [radar-util :refer [get-location redraw]]
              [scene :refer [find-point]]
@@ -146,6 +146,7 @@
     (let [{:keys [x y]} (get-location state)
           selected-id (:selected @state)
           selected (get (:aircraft @state) selected-id nil)
+          active-chat (get-active state)
           ;; NB don't change modes if we have a custom on-submit.
           ;; Especially since we're using native input...
           moded (if on-submit
@@ -154,7 +155,10 @@
           my-prompt 
           (cond
             (string? prompt) prompt
-            (not (nil? selected)) (str ">" (:callsign selected))
+            (and
+              (= :global active-chat)
+              (not (nil? selected))) (str ">" (:callsign selected))
+            (not= :global active-chat) (str ">" (:callsign active-chat))
             :else nil)
           submit-handler (or on-submit default-input-submit)]
       (assoc moded
@@ -285,6 +289,10 @@
 ;; Chat commands
 ;;
 
+(defn cancel-toggle-chat
+  [machine state]
+  (to-mode :normal))
+
 (defmulti toggle-private-chat
   "Open a private chat. Pass :pilot to open
   selections for a pilot, :controller to open for
@@ -339,9 +347,17 @@
       (toggle-private-chat machine state selected)
       :else (toggle-combined-chat machine state))))
 
-(defn cancel-toggle-chat
+(defn reply-private-chat
+  "Reply to the most recently received private chat message
+  within the current context. That is, when already filtered
+  to a private chat, this will do the same as start-insert."
   [machine state]
-  (to-mode :normal))
+  (when (= :global (get-active state))
+    (when-let [first-private (->> (get-active-buffer @state)
+                             (filter #(not (nil? (:with %))))
+                             first)]
+      (set-active! state (:with first-private))))
+  (start-insert machine state))
 
 ;;
 ;; Data management
