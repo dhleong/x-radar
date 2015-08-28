@@ -40,7 +40,9 @@
 (def move-distance 10)
 (def zoom-distance 50)
 
-(def submits 0)
+;; candidates for prompt-reply-private-chat will be taken
+;;  from this many recent output lines
+(def prompt-reply-limit 15)
 
 (defn- default-input-submit
   [machine state message]
@@ -350,7 +352,8 @@
 (defn reply-private-chat
   "Reply to the most recently received private chat message
   within the current context. That is, when already filtered
-  to a private chat, this will do the same as start-insert."
+  to a private chat, this will do the same as start-insert.
+  You will be left in filtered private chat mode."
   [machine state]
   (when (= :global (get-active state))
     (when-let [first-private (->> (get-active-buffer @state)
@@ -359,11 +362,40 @@
       (set-active! state (:with first-private))))
   (start-insert machine state))
 
+(defn prompt-reply-private-chat
+  "Reply to a received private chat message. You will 
+  be prompted to choose the recipient even if already
+  filtered to a private chat. This command is different 
+  from toggle-private-chat in that the candidates are
+  only those with whom you've received or to whom you've
+  sent a private chat message recently."
+  ([machine state]
+   (let [targets (->> @(:output-buffer @state)
+                      (take prompt-reply-limit)
+                      (filter #(not (nil? (:with %))))
+                      (map #(select-keys % [:with :with-label]))
+                      distinct)]
+     (if (seq targets)
+       (start-select machine state
+                     :items targets
+                     :prompt "Reply to:"
+                     :to-string #(:with-label %)
+                     :on-cancel 'cancel-toggle-chat
+                     :on-select 'prompt-reply-private-chat)
+       (doecho "Nobody to reply to recently"))))
+  ([machine state cid-or-line]
+   (let [cid (if (map? cid-or-line)
+               (:with cid-or-line)
+               cid-or-line)]
+     (set-active! state cid)
+     (start-insert machine state))))
+
 ;;
 ;; Data management
 ;;
 
 (defn commit
+  "Write updated settings file to disk."
   [machine state]
   (commit-profile state)
   (doecho "Settings written to disk."))
