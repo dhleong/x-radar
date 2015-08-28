@@ -162,13 +162,16 @@
   (q/rect-mode :corner)
   (let [scheme (-> radar :profile :scheme)
         active-chat (get-active radar)
+        pending @(:pending-messages radar)
         max-output-count (-> radar :profile :output-size)
-        max-output (* output-size max-output-count)
+        text-height (+ (q/text-descent) (q/text-ascent))
+        max-output (* text-height max-output-count)
         char-width (q/text-width "M")
         base-available-width (- (q/width) output-padding output-padding)
         available-width (if (= :global active-chat)
                           base-available-width
                           (- base-available-width output-size output-padding)) 
+        upper-left-y (- output-padding max-output)
         chars-per-line (int (Math/floor (/ available-width char-width)))
         output-buffer (get-active-buffer radar)
         output-scroll (:output-scroll radar)
@@ -182,10 +185,27 @@
     (with-alpha q/fill-int (-> scheme :output :background))
     (q/no-stroke)
     (q/rect output-padding 
-            (- output-padding
-               max-output)
+            upper-left-y
             base-available-width
             max-output)
+    (when (> pending 0)
+      (let [pending-text (str pending " pending")]
+        (q/push-style)
+        (q/with-translation [output-padding upper-left-y]
+          (q/stroke-int (-> scheme :output :text))
+          (q/line 0
+                  0
+                  base-available-width
+                  0)
+          (q/rect 0
+                  (- text-height)
+                  (+ (q/text-width pending-text)
+                     output-padding
+                     output-padding)
+                  text-height)
+          (q/fill-int (-> scheme :output :outgoing))
+          (q/text pending-text output-padding (- (q/text-descent))))
+        (q/pop-style)))
     (q/push-matrix)
     (when (not= :global active-chat)
       ;; private chat mode!
@@ -199,7 +219,8 @@
     ;; scroll bar!
     (when (> (int scroll-length) 0)
       (q/with-translation [(- available-width 
-                              scrollbar-width) 0]
+                              scrollbar-width) 
+                           output-padding]
         (q/no-stroke)
         (q/fill-int (-> scheme :output :text))
         (q/rect 0 (- scroll-start)
