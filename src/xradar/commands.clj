@@ -160,6 +160,7 @@
     (assoc moded
            :insert-box 
            (create-insert 
+             state
              x 
              (+ y (q/height) (- input-height)) 
              (q/width)

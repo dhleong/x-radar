@@ -6,6 +6,7 @@
              [string :refer [split]]]
             [clojure.java.io :as io]
             [xradar
+             [alias :refer [parse-alias]]
              [util :refer [deep-merge]]]))
 
 (def default-bindings-filename "default-bindings.edn")
@@ -36,6 +37,9 @@
     (case command
       "map" {:bindings (read-map parts value)}
       "set" {:settings (read-set parts value)}
+      "alias" (if-let [the-alias (parse-alias value)]
+                {:aliases {(:alias the-alias) the-alias}}
+                (println "Unable to parse alias" value))
       (println "Unsupported command" command))))
 
 (defn read-bindings

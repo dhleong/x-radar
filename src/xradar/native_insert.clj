@@ -4,7 +4,8 @@
   (:require [clojure.test :refer [function?]]
             [seesaw
              [core :as s]
-             [mig :refer [mig-panel]]]))
+             [mig :refer [mig-panel]]]
+            [xradar.alias :refer [expand-values]]))
 
 (def input-height 30)
 
@@ -51,7 +52,7 @@
 (defn create-insert
   "Create the insert mode box,
   with the given callbacks"
-  [x y w & {:keys [prompt history on-submit on-cancel]}]
+  [state x y w & {:keys [prompt history on-submit on-cancel]}]
   {:pre [(function? on-submit) (function? on-cancel)]}
   (let [input 
         (s/text 
@@ -62,7 +63,19 @@
           [:key-pressed #(try
                            (key-handler on-submit on-cancel %)
                            (catch Exception e
-                             (def last-exc e)))])
+                             (def last-exc e)))
+           :key-released #(let [input (s/to-widget %)
+                                expanded (expand-values 
+                                           state
+                                           {:cursor (-> input
+                                                        (.getCaret)
+                                                        (.getDot))}
+                                           (s/value input))]
+                            (def cursor (-> input
+                                            (.getCaret)
+                                            (.getDot)))
+                            (def last-expanded expanded)
+                            (def last-value (s/value input)))])
         contents
         (if (string? prompt)
           (mig-panel
