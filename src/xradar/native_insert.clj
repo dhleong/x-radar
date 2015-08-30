@@ -4,9 +4,52 @@
   (:require [clojure.test :refer [function?]]
             [seesaw
              [core :as s]
-             [mig :refer [mig-panel]]]))
+             [mig :refer [mig-panel]]]
+            [xradar.alias :refer [expand-values]])
+  (:import [java.awt.event InputEvent]))
 
 (def input-height 30)
+
+(defn- get-cursor
+  [input]
+  (-> input
+      (.getCaret)
+      (.getDot)))
+
+(defn select-next-var
+  [text & {:keys [from dir] :or {from 0 dir :right}}]
+  (let [matcher (re-matcher #"\$[0-9]" text)]
+    (case dir
+      ;; search forward; easy
+      :right
+      (cond 
+        ;; found a subsequent match!
+        (.find matcher from)
+        [(.start matcher) (.end matcher)]
+        ;; no more; search from the beginning
+        (> from 0)
+        (select-next-var text)
+        ;; otherwise, there are no more matches
+        :else nil)
+      ;; searching backward is more problematic
+      :left
+      (let [search-window (subs text 0 from)
+            previous-dollar (.lastIndexOf search-window "$")]
+        (.reset matcher search-window)
+        (cond
+          ;; nothing behind us?
+          (< previous-dollar 0)
+          (if (= (count text) from)
+            ;; we already searched the whole string; there's nothing else
+            nil
+            ;; recurse from the end of the string
+            (select-next-var text :from (count text) :dir dir))
+          ;; found something there? excellent!
+          (.find matcher previous-dollar)
+          [(.start matcher) (.end matcher)]
+          ;; otherwise, keep looking backwards
+          :else (select-next-var text :from previous-dollar :dir dir))))))
+
 
 (defn- key-handler
   [on-submit on-cancel key-event]
@@ -17,8 +60,21 @@
         {:keys [scrollback history]} 
          (s/user-data input)]
     (case (.getKeyCode key-event)
+      ;; tab; try to hop between numbered vars
+      9 (let [mods (.getModifiers key-event)
+              dir (if (= InputEvent/SHIFT_MASK mods)
+                    :left
+                    :right)
+              sel-func (if (= :left dir) first second)
+              selection (s/selection input)
+              cursor (or (sel-func selection) (get-cursor input))]
+          (when-let [next-var (select-next-var
+                                (s/value input) 
+                                :from cursor
+                                :dir dir)]
+            (s/selection! input next-var)))
       ;; enter; submit the text
-      10 (let [content (.trim (s/value (s/to-widget key-event)))]
+      10 (let [content (.trim (s/value input))]
            (-> root
                s/dispose!)
            (if (empty? content)
@@ -48,21 +104,40 @@
       ;; anything else, do nothing
       false)))
 
+(defn- alias-expander
+  [state key-event]
+  (let [input (s/to-widget key-event)
+        old-value (s/value input)
+        expanded (expand-values 
+                   state
+                   {:cursor (get-cursor input)}
+                   old-value)]
+    (when (not= old-value expanded)
+      (s/value! input expanded)
+      (when-let [var-range (select-next-var expanded)]
+        (s/selection! input var-range)))))
+
 (defn create-insert
   "Create the insert mode box,
   with the given callbacks"
-  [x y w & {:keys [prompt history on-submit on-cancel]}]
+  [state x y w & {:keys [prompt history on-submit on-cancel]}]
   {:pre [(function? on-submit) (function? on-cancel)]}
   (let [input 
-        (s/text 
-          :id :input
-          :user-data {:scrollback (atom -1)
-                      :history history}
-          :listen 
-          [:key-pressed #(try
-                           (key-handler on-submit on-cancel %)
-                           (catch Exception e
-                             (def last-exc e)))])
+        (doto
+          (s/text 
+            :id :input
+            :user-data {:scrollback (atom -1)
+                        :history history}
+            :listen 
+            [:key-pressed #(try
+                             (key-handler on-submit on-cancel %)
+                             (catch Exception e
+                               (def last-exc e)))
+             :key-released #(try
+                              (alias-expander state %)
+                              (catch Exception e
+                                (def last-exc e)))])
+          (.setFocusTraversalKeysEnabled false))
         contents
         (if (string? prompt)
           (mig-panel
