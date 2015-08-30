@@ -17,37 +17,95 @@
     (or (< cursor-idx start)
         (>= cursor-idx end))))
 
+(defn- find-while
+  [text start-idx pred]
+  (cond
+    ;; out of bounds; didn't find it
+    (>= start-idx (count text)) -1
+    (= -1 start-idx) -1
+    ;; pred still matches; recurse
+    (pred (.charAt text start-idx))
+    (recur text (inc start-idx) pred)
+    ;; found it!
+    :else start-idx))
 
-(defn- find-non-whitespace
+(defn- is-var-part?
+  [ch]
+  (not (or
+         (Character/isWhitespace ch)
+         (= \, ch)
+         (= \$ ch))))
+
+(defn- find-args-end
+  [text start-idx nesting]
+  (if (>= start-idx (count text))
+    -1
+    (case (nth text start-idx)
+      \( (find-args-end text (inc start-idx) (inc nesting))
+      \) (+ start-idx nesting)
+      ;; default
+      (find-args-end text (inc start-idx) nesting))))
+
+(defn- find-var-end
   [text start-idx]
-  (if (and
-        (< start-idx (count text))
-        (Character/isWhitespace (.charAt text start-idx)))
-    (recur text (inc start-idx))
-    start-idx))
+  (if (>= start-idx (count text))
+    -1
+    (let [ch (nth text start-idx)] 
+      (case ch
+        \( (inc (find-args-end text (inc start-idx) 0))
+        \$ start-idx
+        ;; default
+        (if (Character/isJavaIdentifierPart ch)
+          (find-var-end text (inc start-idx))
+          start-idx)))))
+
+(defn- find-word-end
+  [text start-idx]
+  (let [is-var (= \$ (nth text start-idx))
+        actual-start (if is-var
+                       (inc start-idx)
+                       start-idx)]
+    (if is-var
+      (find-var-end text actual-start)
+      (find-while text actual-start
+                  (if is-var
+                    is-var-part?
+                    #(not (Character/isWhitespace %)))))))
+
+(defn- find-word-start
+  [text start-idx]
+  (find-while text start-idx 
+              #(Character/isWhitespace %)))
+
 
 (defn split-parts
-  "Construct a lazy sequence of space-delimited parts
-  in a sequence, annotated with their start index.
+  "Construct a lazy sequence of parts in an alias text string,
+  annotated with their start index.
   Excess spaces are respected but not included as parts"
   ([text]
-   (lazy-seq (split-parts 0 text)))
-  ([start-idx text]
-   (if (>= start-idx (count text))
+   (lazy-seq (split-parts text (find-word-start text 0))))
+  ([text start-idx]
+   (if (or 
+         (>= start-idx (count text))
+         (= -1 start-idx))
+     ;; nothing to do
      []
-     (let [next-space (.indexOf text " " start-idx)
-           word-end (if (= -1 next-space)
-                      (count text)
-                      next-space)
+     ;; okay... let's do this
+     (let [next-end (find-word-end text start-idx)
+           word-end (cond
+                      (= -1 next-end) (count text)
+                      (= start-idx next-end) (inc next-end)
+                      :else next-end)
            next-word (.substring text start-idx word-end)
-           next-start (find-non-whitespace
+           next-start (find-word-start
                         text
-                        (+ start-idx (count next-word) 1))]
-       (if (empty? next-word)
-         []
-         (cons {:part next-word
-                :start start-idx}
-               (lazy-seq (split-parts next-start text))))))))
+                        (+ start-idx (count next-word)))
+           part {:part next-word
+                 :start start-idx}]
+       (cond
+         (empty? next-word) []
+         (= -1 next-start) [part]
+         :else (cons part (lazy-seq (split-parts text next-start))))))))
 
 ;;
 ;; Parsing into AST

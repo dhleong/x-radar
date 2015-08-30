@@ -8,11 +8,7 @@
     (is (= [] (split-parts ""))))
   (testing "Single word"
     (is (= [{:part "Now" :start 0}] (split-parts "Now"))))
-  (testing "Two words"
-    (is (= [{:part "Now" :start 0}
-            {:part "I've" :start 4}] 
-           (split-parts "Now I've"))))
-  (testing "Multi-word"
+  (testing "Multi words"
     (is (= [{:part "Now" :start 0}
             {:part "I've" :start 4}
             {:part "found" :start 9}
@@ -21,7 +17,25 @@
   (testing "Excess Spaces"
     (is (= [{:part "Keep" :start 0}
             {:part "Flyin'" :start 7}]
-           (split-parts "Keep   Flyin'")))))
+           (split-parts "Keep   Flyin'"))))
+  (testing "Variables and punctuation"
+    (is (= [{:part "$1" :start 0}
+            {:part "," :start 2}
+            {:part "hello" :start 4}]
+           (split-parts "$1, hello")))
+    (is (= [{:part "$1" :start 0}
+            {:part "$2" :start 2}
+            {:part "$3" :start 5}]
+           (split-parts "$1$2 $3"))))
+  (testing "Function"
+    (is (= [{:part "$a($b($1))" :start 0}]
+           (split-parts "$a($b($1))")))
+    (is (= [{:part "foo" :start 0}
+            {:part "$uc($1)" :start 4}]
+           (split-parts "foo $uc($1)")))
+    (is (= [{:part "$uc($1)" :start 0}
+            {:part "foo" :start 8}]
+           (split-parts "$uc($1) foo")))))
 
 (deftest split-parts-lazily
   (testing "Lazy eval with StringBuilder"
@@ -54,36 +68,37 @@
            (parse-alias ".hi hello there"))))
   (testing "Positional Variable"
     (is (= {:alias ".hi"
-            :parts ["hello," {:type :positional
-                              :index 1}]}
+            :parts ["hello," 
+                    {:type :positional
+                     :index 1}]}
            (parse-alias ".hi hello, $1"))))
   (testing "Variable"
     (is (= {:alias ".hi"
-            :parts ["hello," {:type :var
-                              :name "callsign"}]}
-           (parse-alias ".hi hello, $callsign"))))
+            :parts ["hello" {:type :var
+                             :name "callsign"}]}
+           (parse-alias ".hi hello $callsign"))))
   (testing "Function"
     (is (= {:alias ".hi"
-            :parts ["hello," {:type :func
-                              :name "foo"
-                              :args "1"}]}
-           (parse-alias ".hi hello, $foo(1)"))))
+            :parts ["hello" {:type :func
+                             :name "foo"
+                             :args "1"}]}
+           (parse-alias ".hi hello $foo(1)"))))
   (testing "Function with variable"
     (is (= {:alias ".hi"
-            :parts ["hello," {:type :func
-                              :name "foo"
-                              :args {:type :positional
-                                     :index 1}}]}
-           (parse-alias ".hi hello, $foo($1)"))))
+            :parts ["hello" {:type :func
+                             :name "foo"
+                             :args {:type :positional
+                                    :index 1}}]}
+           (parse-alias ".hi hello $foo($1)"))))
   (testing "Nested Function with variable"
     (is (= {:alias ".hi"
-            :parts ["hello," {:type :func
-                              :name "foo"
-                              :args {:type :func
-                                     :name "uc"
-                                     :args {:type :positional
-                                            :index 1}}}]}
-           (parse-alias ".hi hello, $foo($uc($1))")))))
+            :parts ["hello" {:type :func
+                             :name "foo"
+                             :args {:type :func
+                                    :name "uc"
+                                    :args {:type :positional
+                                           :index 1}}}]}
+           (parse-alias ".hi hello $foo($uc($1))")))))
 
 (defmacro expand
   [text]
