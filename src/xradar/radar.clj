@@ -6,6 +6,7 @@
              [core :as q] 
              [middleware :as qm]]
             [xradar
+             [alias-vars :refer [alias-functions alias-variables]]
              [input :refer [create-input describe-input 
                             process-input-press process-input-release
                             reset-modifiers!]]
@@ -221,13 +222,15 @@
          (satisfies? XScene scene)]}
   (let [profile (fill-profile raw-profile)
         state (atom (deep-merge
-                      {:history-command (atom [])
+                      {:functions alias-functions
+                       :history-command (atom [])
                        :history-insert (atom [])
                        :profile profile
                        :network network
                        :output-scroll 0
                        :scene scene
                        :strips (create-strip-bay)
+                       :variables alias-variables
                        :aircraft {}}
                       (create-output-buffers)))]
     (q/defsketch xradar
