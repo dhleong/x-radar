@@ -50,11 +50,38 @@
       false)))
 
 (defn select-next-var
-  [text & {:keys [from dir] :or {from 0 dir 1}}]
-  ;; TODO support searching backwards, looping around
+  [text & {:keys [from dir] :or {from 0 dir :right}}]
   (let [matcher (re-matcher #"\$[0-9]" text)]
-    (when (.find matcher from)
-      [(.start matcher) (.end matcher)])))
+    (case dir
+      ;; search forward; easy
+      :right
+      (cond 
+        ;; found a subsequent match!
+        (.find matcher from)
+        [(.start matcher) (.end matcher)]
+        ;; no more; search from the beginning
+        (> from 0)
+        (select-next-var text)
+        ;; otherwise, there are no more matches
+        :else nil)
+      ;; searching backward is more problematic
+      :left
+      (let [search-window (subs text 0 from)
+            previous-dollar (.lastIndexOf search-window "$")]
+        (.reset matcher search-window)
+        (cond
+          ;; nothing behind us?
+          (< previous-dollar 0)
+          (if (= (count text) from)
+            ;; we already searched the whole string; there's nothing else
+            nil
+            ;; recurse from the end of the string
+            (select-next-var text :from (count text) :dir dir))
+          ;; found something there? excellent!
+          (.find matcher previous-dollar)
+          [(.start matcher) (.end matcher)]
+          ;; otherwise, keep looking backwards
+          :else (select-next-var text :from previous-dollar :dir dir))))))
 
 (defn- alias-expander
   [state key-event]
