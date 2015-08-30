@@ -37,5 +37,6 @@
   (testing "Aliases"
     (let [result (aliases "#alias \".afv Cleared as filed\"")]
       (is (= {".afv" {:alias ".afv"
+                      :body "Cleared as filed"
                       :parts ["Cleared" "as" "filed"]}}
              result)))))

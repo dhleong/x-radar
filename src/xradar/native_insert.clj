@@ -64,18 +64,22 @@
                            (key-handler on-submit on-cancel %)
                            (catch Exception e
                              (def last-exc e)))
-           :key-released #(let [input (s/to-widget %)
-                                expanded (expand-values 
-                                           state
-                                           {:cursor (-> input
-                                                        (.getCaret)
-                                                        (.getDot))}
-                                           (s/value input))]
-                            (def cursor (-> input
-                                            (.getCaret)
-                                            (.getDot)))
-                            (def last-expanded expanded)
-                            (def last-value (s/value input)))])
+           :key-released #(try
+                            (let [input (s/to-widget %)
+                                  expanded (expand-values 
+                                             state
+                                             {:cursor (-> input
+                                                          (.getCaret)
+                                                          (.getDot))}
+                                             (s/value input))]
+                              (def cursor (-> input
+                                              (.getCaret)
+                                              (.getDot)))
+                              (def last-expanded expanded)
+                              (def last-value (s/value input))
+                              (s/value! input expanded))
+                            (catch Exception e
+                              (def last-exc e)))])
         contents
         (if (string? prompt)
           (mig-panel

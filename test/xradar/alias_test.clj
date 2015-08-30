@@ -64,27 +64,32 @@
 (deftest parse-alias-test
   (testing "Simple"
     (is (= {:alias ".hi"
+            :body "hello there"
             :parts ["hello" "there"]}
            (parse-alias ".hi hello there"))))
   (testing "Positional Variable"
     (is (= {:alias ".hi"
+            :body "hello, $1"
             :parts ["hello," 
                     {:type :positional
                      :index 1}]}
            (parse-alias ".hi hello, $1"))))
   (testing "Variable"
     (is (= {:alias ".hi"
+            :body "hello $callsign"
             :parts ["hello" {:type :var
                              :name "callsign"}]}
            (parse-alias ".hi hello $callsign"))))
   (testing "Function"
     (is (= {:alias ".hi"
+            :body "hello $foo(1)"
             :parts ["hello" {:type :func
                              :name "foo"
                              :args "1"}]}
            (parse-alias ".hi hello $foo(1)"))))
   (testing "Function with variable"
     (is (= {:alias ".hi"
+            :body "hello $foo($1)"
             :parts ["hello" {:type :func
                              :name "foo"
                              :args {:type :positional
@@ -92,6 +97,7 @@
            (parse-alias ".hi hello $foo($1)"))))
   (testing "Nested Function with variable"
     (is (= {:alias ".hi"
+            :body "hello $foo($uc($1))"
             :parts ["hello" {:type :func
                              :name "foo"
                              :args {:type :func
@@ -155,4 +161,28 @@
       ;; as usual, an unresolved positional can stop the signal
       (is (= "Keep $freakin($uc($1))" (expand "Keep $freakin($uc($1))")))
       (is (= "Keep Freakin' FLYIN'" (expand "Keep $freakin($uc($keep))")))
-      (is (= "Keep FREAKIN' FLYIN'" (expand "Keep $uc($freakin($keep))"))))))
+      (is (= "Keep FREAKIN' FLYIN'" (expand "Keep $uc($freakin($keep))")))))
+  (testing "Expand alias, but only when cursor is out"
+    (let [state (atom {:profile
+                       {:aliases
+                        {".ff" 
+                         (parse-alias ".ff Now $who $1 $uc($what)")
+                         ".hi"
+                         (parse-alias ".hi Hello world,")}}
+                       :variables
+                       {:who (constantly "I've")
+                        :what (constantly "Serenity")}
+                       :functions
+                       {:uc #(upper-case %2)}})]
+      (let [info {:cursor 3}]
+        ;; cursor just after
+        (is (= ".ff" (expand ".ff"))))
+      (let [info {:cursor 4}]
+        ;; cursor with a space
+        (is (= "Now I've $1 SERENITY" (expand ".ff "))))
+      (let [info {:cursor 3}]
+        ;; inserting before something else
+        (is (= ".hiTest" (expand ".hiTest"))))
+      (let [info {:cursor 4}]
+        ;; inserting before something else
+        (is (= "Hello world,Test" (expand ".hi Test")))))))

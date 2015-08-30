@@ -33,7 +33,8 @@
     (read-bindings (reader input))
     (catch java.io.FileNotFoundException e
       ;; not there? just be empty
-      {:settings {}
+      {:aliases {}
+       :settings {}
        :bindings {}})))
 
 (defn read-profile
@@ -55,7 +56,8 @@
        deep-merge 
        [(:settings settings)
         (:settings profile)
-        {:bindings (:bindings profile)}]))))
+        {:aliases (:aliases profile)}
+        {:bindings (:bindings profile {})}]))))
 
 (defn- pick-settings-file
   [radar]

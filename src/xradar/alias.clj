@@ -5,17 +5,23 @@
 ;; pre-declare some funs used recursively
 (declare parse-alias-part)
 (declare expand-part)
+(declare expand-values)
+
+;; alias ONLY expands with a space after it
+(def alias-expansion 1)
 
 ;;
 ;; Utils
 ;;
 
 (defn- cursor-out
-  [cursor-idx part]
-  (let [start (:start part)
-        end (+ start (count (:part part)))]
-    (or (< cursor-idx start)
-        (>= cursor-idx end))))
+  ([cursor-idx part]
+   (cursor-out cursor-idx part 0))
+  ([cursor-idx part end-offset]
+   (let [start (:start part)
+         end (+ start (count (:part part)) end-offset)]
+     (or (< cursor-idx start)
+         (>= cursor-idx end)))))
 
 (defn- find-while
   [text start-idx pred]
@@ -133,8 +139,8 @@
   [part]
   (let [special (first part)]
     (case special
-      \. {:type :nested
-          :value part}
+      \. {:type :alias
+          :name part}
       \$ (if (.contains part "(")
            (parse-function part)
            (parse-variable part))
@@ -147,7 +153,8 @@
         parts (->> (rest all-parts)
                    (map parse-alias-part))]
     {:alias aname
-     :parts parts}))
+     :parts parts
+     :body (subs raw (inc (count aname)))}))
 
 ;;
 ;; Expansion of values
@@ -178,6 +185,13 @@
                     (nil? (:start part))
                     (cursor-out (:cursor info) part))
               (expand-function state info parsed))
+      :alias (when (cursor-out (:cursor info) part alias-expansion)
+               (when-let [the-alias 
+                          (get-in @state
+                                  [:profile :aliases (:name parsed)])]
+                 (expand-values
+                   state info 
+                   (:body the-alias))))
       :else nil)))
 
 (defn expand-values
@@ -195,7 +209,10 @@
       (when-let [expanded (expand-part state info part)]
         ;; don't bother unless it's different
         (when (not= expanded (:part part))
-          (let [start (:start part)
-                end (+ start (count (:part part)))]
+          (let [end-offset (if (= \. (.charAt (:part part) 0))
+                             alias-expansion
+                             0)
+                start (:start part)
+                end (+ start (count (:part part)) end-offset)]
             (.replace buf start end expanded)))))
     (str buf)))
