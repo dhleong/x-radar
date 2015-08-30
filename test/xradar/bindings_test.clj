@@ -33,7 +33,9 @@
       (is (= {:normal {:g {:up {:call 'start-insert}}}} result))))
   (testing "Settings"
     (let [result (settings "#set/timeout-len 500")]
-      (is (= {:timeout-len 500} result))))
+      (is (= {:timeout-len 500} result)))
+    (let [result (settings "#set/alias-file \"~/Foo.txt\"")]
+      (is (= {:alias-file "~/Foo.txt"} result))))
   (testing "Aliases"
     (let [result (aliases "#alias \".afv Cleared as filed\"")]
       (is (= {".afv" {:alias ".afv"

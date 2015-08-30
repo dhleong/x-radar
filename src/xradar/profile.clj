@@ -4,6 +4,7 @@
   (:require [clojure.java.io :refer [file reader writer]]
             [clojure.test :refer [function?]]
             [xradar
+             [alias :refer [parse-alias]]
              [bindings :refer [read-bindings]]
              [util :refer [deep-merge]]]))
 
@@ -13,19 +14,26 @@
                   (.toLowerCase)
                   (.contains "windows")))
 
+(defn- resolve-file
+  [path]
+  (let [home (System/getProperty "user.home")]
+    (-> path
+        (.replace "~" home)
+        (.replace "$HOME" home)
+        (.replace "%USERPROFILE%" home)
+        file)))
+
 (def default-settings-file
-  (file
-    (System/getProperty "user.home")
+  (resolve-file
     (if windows?
-     "xradar.settings.edn"
-     ".xradar.settings.edn")))
+     "~/xradar.settings.edn"
+     "~/.xradar.settings.edn")))
 
 (def default-pro-file
-  (file
-    (System/getProperty "user.home")
+  (resolve-file
     (if windows?
-     "xradarrc.edn"
-     ".xradarrc.edn")))
+     "~/xradarrc.edn"
+     "~/.xradarrc.edn")))
 
 (defn- try-read-bindings
   [input]
@@ -37,6 +45,18 @@
        :settings {}
        :bindings {}})))
 
+(defn- try-read-aliases
+  [profile]
+  (when-let [alias-file (-> profile :settings :alias-file)]
+    (with-open [rdr (reader (resolve-file alias-file))]
+      (loop [result {}
+             lines (line-seq rdr)]
+        (if-let [line (first lines)]
+          (if-let [parsed (parse-alias line)]
+            (recur (assoc result (:alias parsed) parsed) (rest lines))
+            (recur result (rest lines)))
+          result)))))
+
 (defn read-profile
   "Public for testing; read the profile and settings
   and merge as appropriate. If no reader or file is
@@ -45,17 +65,17 @@
    (read-profile default-pro-file))
   ([reader-or-file & {:keys [settings-reader] 
                       :or {settings-reader try-read-bindings}}]
-   ;; {:pre [(function? settings-reader)]}
-   (def fun? settings-reader)
    (let [profile (try-read-bindings reader-or-file)
          settings-file (or
                          (file (-> profile :settings :settings-file))
                          default-settings-file)
-         settings (settings-reader settings-file)]
+         settings (settings-reader settings-file)
+         alias-file (or (try-read-aliases profile) {})]
      (reduce 
        deep-merge 
        [(:settings settings)
         (:settings profile)
+        {:aliases alias-file}
         {:aliases (:aliases profile)}
         {:bindings (:bindings profile {})}]))))
 

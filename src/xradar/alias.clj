@@ -148,13 +148,14 @@
 
 (defn parse-alias
   [raw]
-  (let [all-parts (map :part (split-parts raw))
-        aname (first all-parts)
-        parts (->> (rest all-parts)
-                   (map parse-alias-part))]
-    {:alias aname
-     :parts parts
-     :body (subs raw (inc (count aname)))}))
+  (when (= \. (first raw))
+    (let [all-parts (map :part (split-parts raw))
+         aname (first all-parts)
+         parts (->> (rest all-parts)
+                    (map parse-alias-part))]
+     {:alias aname
+      :parts parts
+      :body (subs raw (inc (count aname)))})))
 
 ;;
 ;; Expansion of values
