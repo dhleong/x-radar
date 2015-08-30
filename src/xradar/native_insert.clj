@@ -49,6 +49,28 @@
       ;; anything else, do nothing
       false)))
 
+(defn select-next-var
+  [text & {:keys [from dir] :or {from 0 dir 1}}]
+  ;; TODO support searching backwards, looping around
+  (let [matcher (re-matcher #"\$[0-9]" text)]
+    (when (.find matcher from)
+      [(.start matcher) (.end matcher)])))
+
+(defn- alias-expander
+  [state key-event]
+  (let [input (s/to-widget key-event)
+        old-value (s/value input)
+        expanded (expand-values 
+                   state
+                   {:cursor (-> input
+                                (.getCaret)
+                                (.getDot))}
+                   old-value)]
+    (when (not= old-value expanded)
+      (s/value! input expanded)
+      (when-let [var-range (select-next-var expanded)]
+        (s/selection! input var-range)))))
+
 (defn create-insert
   "Create the insert mode box,
   with the given callbacks"
@@ -65,19 +87,7 @@
                            (catch Exception e
                              (def last-exc e)))
            :key-released #(try
-                            (let [input (s/to-widget %)
-                                  expanded (expand-values 
-                                             state
-                                             {:cursor (-> input
-                                                          (.getCaret)
-                                                          (.getDot))}
-                                             (s/value input))]
-                              (def cursor (-> input
-                                              (.getCaret)
-                                              (.getDot)))
-                              (def last-expanded expanded)
-                              (def last-value (s/value input))
-                              (s/value! input expanded))
+                            (alias-expander state %)
                             (catch Exception e
                               (def last-exc e)))])
         contents
