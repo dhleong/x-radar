@@ -21,7 +21,8 @@
                             get-magnetic-var loaded? draw-scene]]
              [sector-scene :refer [load-sector parse-coord]]
              [selection-mode :refer [render-selections]]
-             [util :refer [deep-merge]]]
+             [util :refer [deep-merge]]
+             [weather :refer [draw-weather]]]
             [xradar.modes.ground-mode :refer [create-mode]]))
 
 ;;
@@ -169,12 +170,15 @@
     (q/with-translation [0 (- (q/height) 
                               bar-padding bar-text-size bar-padding)]
       (draw-output radar))
+    (q/with-translation [0 0] ;; can be translated as necessary
+      (draw-weather radar))
     ;; debugging
     (when (-> radar :profile :debug)
-      (q/fill-int 0xffFFFFFF)
-      (q/text-align :left)
-      (q/text-size 11)
-      (q/text (describe-input (-> state :input)) 10 10))
+      (q/with-translation [0 20]
+        (q/fill-int 0xffFFFFFF)
+        (q/text-align :left)
+        (q/text-size 11)
+        (q/text (describe-input (-> state :input)) 10 10)))
     ;; ensure the state is returned
     state))
 

@@ -78,6 +78,7 @@
   [machine state branch]
   (let [call (:call branch)
         has-others (seq (->> branch keys (remove #(= % :call))))]
+    (def following {:c call :others? has-others :b branch})
     (cond 
       ;; a callable and no sub keys
       (and call (not has-others))
@@ -121,6 +122,8 @@
                              (or (:current-sequence new-machine) [])
                              the-key)
           sequenced-machine (assoc new-machine :current-sequence current-sequence)]
+      (def proc {:curb (:current-bindings machine)
+                 :bran (get current-bindings the-key)})
       (if-let [branch (get current-bindings the-key)]
         (follow-key-branch sequenced-machine state branch)
         (pressed-in-mode (assoc sequenced-machine :last-press modded-event)
