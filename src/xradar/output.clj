@@ -167,7 +167,9 @@
         text-height (+ (q/text-descent) (q/text-ascent))
         max-output (* text-height max-output-count)
         char-width (q/text-width "M")
-        base-available-width (- (q/width) output-padding output-padding)
+        base-available-width (- (q/width) 
+                                output-padding output-padding
+                                scrollbar-width)
         available-width (if (= :global active-chat)
                           base-available-width
                           (- base-available-width output-size output-padding)) 
@@ -218,8 +220,8 @@
       (q/translate (+ output-size output-padding) 0))
     ;; scroll bar!
     (when (> (int scroll-length) 0)
-      (q/with-translation [(- available-width 
-                              scrollbar-width) 
+      (q/with-translation [(+ available-width
+                              output-padding) 
                            output-padding]
         (q/no-stroke)
         (q/fill-int (-> scheme :output :text))
