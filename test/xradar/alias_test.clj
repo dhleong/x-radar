@@ -51,15 +51,21 @@
           (is (= {:part "cat" :start 6} (nth parts 2)))
           (is (= {:part "cat" :start 6} (first rest2)))))))
   (testing "Lazy eval in doseq"
-    (let [buf (StringBuilder. "a b")
+    (let [buf (StringBuilder. "a b c")
           parts (atom [])]
       (doseq [part (split-parts buf)]
         (swap! parts conj part)
-        (when (= 1 (count @parts))
-          (.replace buf 2 3 "bar")))
+        (case (count @parts)
+          1 (.replace buf 0 1 "alpha")
+          2 (.replace buf 6 7 "bravo")
+          nil))
+      ;; discovered parts are unchanged in value,
+      ;;  but start at the right locations
       (is (= [{:part "a" :start 0}
-              {:part "bar" :start 2}]
-             @parts)))))
+              {:part "b" :start 6}
+              {:part "c" :start 12}]
+             @parts))
+      (is (= "alpha bravo c" (str buf))))))
 
 (deftest parse-alias-test
   (testing "Simple"
@@ -119,19 +125,17 @@
   (testing "Expand variables"
     (let [state (atom {:variables
                        {:keep (constantly "Flyin'")
-                        :who (constantly "I've")
+                        :i (constantly "I've")
                         :what (constantly "Serenity")}})
           info {:cursor 5}]
       ;; positional variables cannot be expanded
       (is (= "Keep $1" (expand "Keep $1")))
       ;; regular ones can, though
       (is (= "Keep Flyin'" (expand "Keep $keep")))
-      (is (= "Now I've found Serenity" (expand "Now $who found $what")))))
+      (is (= "Now I've found Serenity" (expand "Now $i found $what")))))
   (testing "Expand functions"
     (let [state (atom {:variables
-                       {:keep (constantly "Flyin'")
-                        :who (constantly "I've")
-                        :what (constantly "Serenity")}
+                       {:keep (constantly "Flyin'")}
                        :functions
                        {:uc #(upper-case %2)}})
           info {:cursor 4}]

@@ -84,6 +84,15 @@
               #(Character/isWhitespace %)))
 
 
+(defn- calc-next-word
+  [text start-idx]
+  (let [next-end (find-word-end text start-idx)
+        word-end (cond
+                   (= -1 next-end) (count text)
+                   (= start-idx next-end) (inc next-end)
+                   :else next-end)]
+    word-end))
+
 (defn split-parts
   "Construct a lazy sequence of parts in an alias text string,
   annotated with their start index.
@@ -97,11 +106,7 @@
      ;; nothing to do
      []
      ;; okay... let's do this
-     (let [next-end (find-word-end text start-idx)
-           word-end (cond
-                      (= -1 next-end) (count text)
-                      (= start-idx next-end) (inc next-end)
-                      :else next-end)
+     (let [word-end (calc-next-word text start-idx)
            next-word (.substring text start-idx word-end)
            next-start (find-word-start
                         text
@@ -111,7 +116,14 @@
        (cond
          (empty? next-word) []
          (= -1 next-start) [part]
-         :else (cons part (lazy-seq (split-parts text next-start))))))))
+         :else (cons part 
+                     (lazy-seq 
+                       (split-parts
+                         text 
+                         ;; re-calculate, since it may have changed
+                         (find-word-start
+                           text
+                           (calc-next-word text start-idx))))))))))
 
 ;;
 ;; Parsing into AST
@@ -206,7 +218,7 @@
   [state info text]
   {:pre [(contains? info :cursor)]}
   (let [buf (StringBuilder. text)]
-    (doseq [part (split-parts text)]
+    (doseq [part (split-parts buf)]
       (when-let [expanded (expand-part state info part)]
         ;; don't bother unless it's different
         (when (not= expanded (:part part))
