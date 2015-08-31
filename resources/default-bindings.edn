@@ -69,3 +69,9 @@
 #map/strips/a edit-current-strip
 #map/strips/e edit-current-strip
 #map/strips/o edit-current-strip
+
+;; Weather
+#map/normal/ww weather-watch
+#map/normal/wd weather-delete
+#map/normal/wa weather-ack
+#map/normal/wm weather-toggle-metar

@@ -7,6 +7,7 @@
   xradar.commands
   (:require [clojure
              [edn :as edn]
+             [string :refer [upper-case]]
              [test :refer [function?]]]
             [quil.core :as q]
             [seesaw.core :as s]
@@ -26,7 +27,9 @@
              [selection :refer [to-bindings from-bindings]]
              [selection-mode :as sm]
              [util :refer [deep-merge in-bounds]]
-             [voice-config :refer [open-voice-comms]]])
+             [voice-config :refer [open-voice-comms]]
+             [weather :refer [mark-acked! unwatch-weather!
+                              watch-weather!]]])
   (:import [java.io StringReader PushbackReader]))
 
 ;;
@@ -67,7 +70,7 @@
   echo a message explaining why."
   [new-mode & values]
   `(assoc (to-mode ~new-mode)
-          :last-echo ~@values))
+          :last-echo (str ~@values)))
 
 (defmacro with-machine
   "When all you have is the radar state and want to
@@ -168,12 +171,22 @@
              :history (or history @(:history-insert @state))
              :on-cancel #(with-machine (to-mode (or cancel-mode :normal)))
              :on-submit 
-             #(let [result (submit-handler machine state %)
+             #(let [result 
+                    (try
+                      (submit-handler machine state %)
+                      (catch Exception e
+                        (def last-exc e)
+                        (notify-mode :normal "Error" (.getMessage e))))
                     new-machine
                     (if (:mode result)
                       result
                       (-> (to-mode :normal)))]
-                (with-machine (deep-merge machine new-machine))
+                ;; not sure why this was deep-merge...
+                ;;  it breaks key stroke handling. Repro
+                ;;  is `wa` to ack a weather change; it will
+                ;;  then have the :call for `wa` in the root `w`,
+                ;;  breaking things until you hit `esc`
+                (with-machine (merge machine new-machine))
                 (redraw state))))))
 
 (defn stop-insert
@@ -592,3 +605,61 @@
       (notify-mode :normal "No flight strips")
       (to-mode new-mode))))
 
+;;
+;; Weather commands
+;;
+
+(defn weather-ack
+  "Acknowledge the changed weather at a given airport"
+  ([machine state]
+   (start-insert machine state 
+                 :prompt "Acknowledge Airport Weather:"
+                 :history []
+                 :on-submit weather-ack))
+  ([machine state icao]
+   (mark-acked! icao)
+   (redraw state)
+   (notify-mode :normal "Acknowledged weather for " (upper-case icao))))
+
+(defn weather-delete
+  "Remove weather watch at a given airport"
+  ([machine state]
+   (start-insert machine state 
+                 :prompt "Remove Airport Weather:"
+                 :history []
+                 :on-submit weather-delete))
+  ([machine state icao]
+   (unwatch-weather! icao)
+   (redraw state)
+   (notify-mode :normal "Removed watch for " (upper-case icao))))
+
+(defn weather-watch
+  "Watch the weather at a given airport"
+  ([machine state]
+   (start-insert machine state 
+                 :prompt "Watch Airport Weather:"
+                 :history []
+                 :on-submit weather-watch))
+  ([machine state icao]
+   (watch-weather! icao)
+   (redraw state)
+   (notify-mode :normal "Watching weather at " (upper-case icao))))
+
+(defn weather-toggle-metar
+  "Toggle showing the full metar for an airport"
+  ([machine state]
+   (start-insert machine state 
+                 :prompt "Toggle airport METAR:"
+                 :history []
+                 :on-submit weather-toggle-metar))
+  ([machine state raw-icao]
+   (let [icao (upper-case raw-icao)]
+     (swap! state #(assoc
+                     %
+                     :shown-metar 
+                     (if (or (empty? raw-icao)
+                             (= icao (:shown-metar %)))
+                       nil ;; no more metar
+                       icao)))
+   (redraw state)
+   (to-mode :normal))))
