@@ -636,7 +636,6 @@
 (defn weather-watch
   "Watch the weather at a given airport"
   ([machine state]
-   (def do-watch? true)
    (start-insert machine state 
                  :prompt "Watch Airport Weather:"
                  :history []
@@ -645,3 +644,22 @@
    (watch-weather! icao)
    (redraw state)
    (notify-mode :normal "Watching weather at " (upper-case icao))))
+
+(defn weather-toggle-metar
+  "Toggle showing the full metar for an airport"
+  ([machine state]
+   (start-insert machine state 
+                 :prompt "Toggle airport METAR:"
+                 :history []
+                 :on-submit weather-toggle-metar))
+  ([machine state raw-icao]
+   (let [icao (upper-case raw-icao)]
+     (swap! state #(assoc
+                     %
+                     :shown-metar 
+                     (if (or (empty? raw-icao)
+                             (= icao (:shown-metar %)))
+                       nil ;; no more metar
+                       icao)))
+   (redraw state)
+   (to-mode :normal))))

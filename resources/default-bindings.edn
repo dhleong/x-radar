@@ -74,3 +74,4 @@
 #map/normal/ww weather-watch
 #map/normal/wd weather-delete
 #map/normal/wa weather-ack
+#map/normal/wm weather-toggle-metar

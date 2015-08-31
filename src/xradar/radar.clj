@@ -21,8 +21,8 @@
                             get-magnetic-var loaded? draw-scene]]
              [sector-scene :refer [load-sector parse-coord]]
              [selection-mode :refer [render-selections]]
-             [util :refer [deep-merge]]
-             [weather :refer [draw-weather]]]
+             [util :refer [deep-merge with-alpha]]
+             [weather :refer [draw-weather metar-for]]]
             [xradar.modes.ground-mode :refer [create-mode]]))
 
 ;;
@@ -43,6 +43,7 @@
 (def bar-text-size 14)
 (def bar-padding 10)
 (def echo-text-size 13.5)
+(def metar-text-size 10)
 
 ;;
 ;; Util
@@ -171,10 +172,25 @@
                               bar-padding bar-text-size bar-padding)]
       (draw-output radar))
     (q/with-translation [0 0] ;; can be translated as necessary
-      (draw-weather radar))
+      (draw-weather radar)
+      (when-let [shown-metar (:shown-metar radar)]
+        (q/text-size metar-text-size)
+        (let [size (+ (q/text-ascent)
+                      (q/text-descent))
+              metar (str
+                      " "
+                      (or (:raw (metar-for shown-metar)) "---")
+                      " ")]
+          (q/with-translation [0 size]
+            (with-alpha q/fill-int (-> scheme :output :background))
+            (q/stroke-int (-> scheme :output :text))
+            (q/rect-mode :corner)
+            (q/rect 0 0 (q/text-width metar) size)
+            (q/fill-int (-> scheme :output :text))
+            (q/text metar 0 metar-text-size)))))
     ;; debugging
     (when (-> radar :profile :debug)
-      (q/with-translation [0 20]
+      (q/with-translation [0 30]
         (q/fill-int 0xffFFFFFF)
         (q/text-align :left)
         (q/text-size 11)
