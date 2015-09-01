@@ -257,27 +257,35 @@
                  (+ offset output-size)))))
     (q/pop-matrix)))
 
+(defn- calculate-chars-per-line
+  [state]
+  (if-let [cached-metrics (-> @state :output-metrics-cache)]
+    ;; read from cache
+    (:chars-per-line cached-metrics)
+    (do
+      (q/push-matrix)
+      (q/text-size output-size)
+      (let [active-chat (get-active state)
+            char-width (q/text-width "M")
+            base-available-width (- (q/width) 
+                                    output-padding output-padding
+                                    scrollbar-width)
+            available-width (if (= :global active-chat)
+                              base-available-width
+                              (- base-available-width output-size output-padding))
+            chars-per-line (int (Math/floor (/ available-width char-width)))] 
+        (q/pop-matrix)
+        chars-per-line))))
+
 (defn scroll-output!
   [state amount]
-  (q/push-matrix)
-  (q/text-size output-size)
-  (let [active-chat (get-active state)
-        char-width (q/text-width "M")
-        base-available-width (- (q/width) 
-                                output-padding output-padding
-                                scrollbar-width)
-        available-width (if (= :global active-chat)
-                          base-available-width
-                          (- base-available-width output-size output-padding))
-        chars-per-line (int (Math/floor (/ available-width char-width)))] 
-    (q/pop-matrix)
-   (swap! state 
-          #(let [outputs (buffer-count chars-per-line state)
-                 output-size (-> % :profile :output-size)
-                 last-scroll (:output-scroll %)
-                 new-scroll (+ amount last-scroll)
-                 adjusted (-> new-scroll
-                              (min (- outputs output-size))
-                              (max 0))]
-             (def los outputs)
-             (assoc % :output-scroll adjusted)))))
+  (let [chars-per-line (calculate-chars-per-line state)] 
+    (swap! state 
+           #(let [outputs (buffer-count chars-per-line state)
+                  output-size (-> % :profile :output-size)
+                  last-scroll (:output-scroll %)
+                  new-scroll (+ amount last-scroll)
+                  adjusted (-> new-scroll
+                               (min (- outputs output-size))
+                               (max 0))]
+              (assoc % :output-scroll adjusted)))))
