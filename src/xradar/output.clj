@@ -16,6 +16,7 @@
 ;; eg: `[00:00:00] ` but as all spaces
 (def multi-line-prefix "           ")
 
+(declare get-active)
 (declare build-output)
 
 (defn- prefix-with
@@ -27,6 +28,29 @@
     (assoc line 
            :text (str "<" with-label "> " (:text line)))
     line))
+
+(defn- calculate-metrics
+  [state]
+  (if-let [cached (:output-metrics-cache @state)]
+    cached
+    (let [active-chat (get-active state)
+          text-height (+ (q/text-descent) (q/text-ascent))
+          char-width (q/text-width "M")
+          base-available-width (- (q/width) 
+                                  output-padding output-padding
+                                  scrollbar-width)
+          available-width (if (= :global active-chat)
+                            base-available-width
+                            (- base-available-width output-size output-padding)) 
+          chars-per-line (int (Math/floor (/ available-width char-width)))
+          metrics
+          {:text-height text-height
+           :char-width char-width
+           :base-available-width base-available-width
+           :available-width available-width
+           :chars-per-line chars-per-line}]
+      (swap! state assoc :output-metrics-cache metrics)
+      metrics)))
 
 (defn append-output
   "Append a line of output.
@@ -86,11 +110,17 @@
       :global
       (object-for state current))))
 
+(defn invalidate-output!
+  "Invalidate any cache"
+  [state]
+  (swap! state assoc :output-metrics-cache nil))
+
 (defn set-active!
   "Set the currently active chat. Either pass a cid
   of a pilot or controller to filter to, or :global
   to show all chats together"
   [state cid-or-global]
+  (invalidate-output! state) ;; metrics change based on active mode
   (swap! state 
          assoc 
          :current-output cid-or-global
@@ -158,25 +188,23 @@
       :else (-> scheme :output :text))))
 
 (defn draw-output
-  [radar]
+  [state]
   (q/text-size output-size)
   (q/text-align :left)
   (q/rect-mode :corner)
-  (let [scheme (-> radar :profile :scheme)
+  (let [radar @state
+        scheme (-> radar :profile :scheme)
         active-chat (get-active radar)
         pending @(:pending-messages radar)
         max-output-count (-> radar :profile :output-size)
-        text-height (+ (q/text-descent) (q/text-ascent))
+        metrics (calculate-metrics state)
+        text-height (:text-height metrics)
+        char-width (:char-width metrics)
+        base-available-width (:base-available-width metrics)
+        available-width (:available-width metrics) 
+        chars-per-line (:chars-per-line metrics)
         max-output (* text-height max-output-count)
-        char-width (q/text-width "M")
-        base-available-width (- (q/width) 
-                                output-padding output-padding
-                                scrollbar-width)
-        available-width (if (= :global active-chat)
-                          base-available-width
-                          (- base-available-width output-size output-padding)) 
         upper-left-y (- output-padding max-output)
-        chars-per-line (int (Math/floor (/ available-width char-width)))
         ;; output-buffer (get-active-buffer radar)
         output-buffer (build-output
                         chars-per-line
@@ -257,29 +285,9 @@
                  (+ offset output-size)))))
     (q/pop-matrix)))
 
-(defn- calculate-chars-per-line
-  [state]
-  (if-let [cached-metrics (-> @state :output-metrics-cache)]
-    ;; read from cache
-    (:chars-per-line cached-metrics)
-    (do
-      (q/push-matrix)
-      (q/text-size output-size)
-      (let [active-chat (get-active state)
-            char-width (q/text-width "M")
-            base-available-width (- (q/width) 
-                                    output-padding output-padding
-                                    scrollbar-width)
-            available-width (if (= :global active-chat)
-                              base-available-width
-                              (- base-available-width output-size output-padding))
-            chars-per-line (int (Math/floor (/ available-width char-width)))] 
-        (q/pop-matrix)
-        chars-per-line))))
-
 (defn scroll-output!
   [state amount]
-  (let [chars-per-line (calculate-chars-per-line state)] 
+  (let [chars-per-line (:chars-per-line (calculate-metrics state))] 
     (swap! state 
            #(let [outputs (buffer-count chars-per-line state)
                   output-size (-> % :profile :output-size)
