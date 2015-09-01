@@ -16,6 +16,8 @@
 ;; eg: `[00:00:00] ` but as all spaces
 (def multi-line-prefix "           ")
 
+(declare build-output)
+
 (defn- prefix-with
   "Prefix an output line as appropriate
   if it is 'with' someone 
@@ -61,8 +63,10 @@
               raw))))
 
 (defn buffer-count
-  [state]
-  (count (get-active-buffer @state)))
+  [chars-per-line state]
+  (count (build-output
+           chars-per-line
+           (get-active-buffer @state))))
 
 (defn create-output-buffers
   []
@@ -117,12 +121,10 @@
 
 ;; public mostly for testing
 (defn build-output
-  [max-lines chars-per-line output-buffer]
+  [chars-per-line output-buffer]
   (->> output-buffer
-       (take max-lines)
        (mapcat format-text 
-               (repeat chars-per-line))
-       (take max-lines)))
+               (repeat chars-per-line))))
 
 (defn calculate-scroll
   "Returns a tuple of (start, length) describing
@@ -175,7 +177,10 @@
                           (- base-available-width output-size output-padding)) 
         upper-left-y (- output-padding max-output)
         chars-per-line (int (Math/floor (/ available-width char-width)))
-        output-buffer (get-active-buffer radar)
+        ;; output-buffer (get-active-buffer radar)
+        output-buffer (build-output
+                        chars-per-line
+                        (get-active-buffer radar))
         output-scroll (:output-scroll radar)
         ;; scroll bar stuff
         [scroll-start-perc scroll-length-perc] 
@@ -183,6 +188,7 @@
           max-output-count output-scroll output-buffer)
         scroll-start (* scroll-start-perc max-output)
         scroll-length (* scroll-length-perc max-output)]
+    (def lo output-buffer)
     ;; background
     (with-alpha q/fill-int (-> scheme :output :background))
     (q/no-stroke)
@@ -234,10 +240,9 @@
     ;; output text
     (q/fill-int (-> scheme :output :text))
     (q/no-stroke)
-    (loop [output (build-output 
-                    max-output-count
-                    chars-per-line
-                    (drop output-scroll output-buffer))
+    (loop [output (->> output-buffer 
+                       (drop output-scroll)
+                       (take max-output-count))
            offset 0]
       (when (seq output)
         (let [line (first output)]
@@ -251,3 +256,28 @@
           (recur (rest output)
                  (+ offset output-size)))))
     (q/pop-matrix)))
+
+(defn scroll-output!
+  [state amount]
+  (q/push-matrix)
+  (q/text-size output-size)
+  (let [active-chat (get-active state)
+        char-width (q/text-width "M")
+        base-available-width (- (q/width) 
+                                output-padding output-padding
+                                scrollbar-width)
+        available-width (if (= :global active-chat)
+                          base-available-width
+                          (- base-available-width output-size output-padding))
+        chars-per-line (int (Math/floor (/ available-width char-width)))] 
+    (q/pop-matrix)
+   (swap! state 
+          #(let [outputs (buffer-count chars-per-line state)
+                 output-size (-> % :profile :output-size)
+                 last-scroll (:output-scroll %)
+                 new-scroll (+ amount last-scroll)
+                 adjusted (-> new-scroll
+                              (min (- outputs output-size))
+                              (max 0))]
+             (def los outputs)
+             (assoc % :output-scroll adjusted)))))

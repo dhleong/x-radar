@@ -170,7 +170,9 @@
     ;; draw output
     (q/with-translation [0 (- (q/height) 
                               bar-padding bar-text-size bar-padding)]
-      (draw-output radar))
+      (let [s (System/currentTimeMillis)]
+        (draw-output radar)
+        (def duration (- (System/currentTimeMillis) s))))
     (q/with-translation [0 0] ;; can be translated as necessary
       (draw-weather radar)
       (when-let [shown-metar (:shown-metar radar)]
