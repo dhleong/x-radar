@@ -42,8 +42,10 @@
   (testing "Handle scroll"
     (let [original (with-mods :control) 
           state (atom {:current-output :global
-                       :output-buffer (atom [1 2 3])
+                       :output-buffer (atom [{:text "1"} {:text "2"}
+                                             {:text "3"}])
                        :profile {:output-size 1}
+                       :output-metrics-cache {:chars-per-line 100}
                        :output-scroll 0})
           machine (process-press original 
                                  {:key :b :key-code 66} 

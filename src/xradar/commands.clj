@@ -19,8 +19,9 @@
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
                               get-controllers push-strip!]]
-             [output :refer [append-output buffer-count 
-                             get-active get-active-buffer set-active!]]
+             [output :refer [append-output 
+                             get-active get-active-buffer 
+                             scroll-output! set-active!]]
              [profile :refer [commit-profile]]
              [radar-util :refer [get-location redraw]]
              [scene :refer [find-point]]
@@ -238,15 +239,7 @@
 
 (defn output-scroll
   [machine state amount]
-  (swap! state 
-         #(let [outputs (buffer-count state)
-                output-size (-> % :profile :output-size)
-                last-scroll (:output-scroll %)
-                new-scroll (+ amount last-scroll)
-                adjusted (-> new-scroll
-                             (min (- outputs output-size))
-                             (max 0))]
-            (assoc % :output-scroll adjusted)))
+  (scroll-output! state amount)
   ;; no change in machine besides resetting sequence
   (to-mode :normal))
 

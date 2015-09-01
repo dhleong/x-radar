@@ -5,6 +5,7 @@
             [quil
              [core :as q] 
              [middleware :as qm]]
+            [seesaw.core :as s]
             [xradar
              [alias-vars :refer [alias-functions alias-variables]]
              [input :refer [create-input describe-input 
@@ -13,9 +14,10 @@
              [flight-strips :refer [create-strip-bay render-strip-bay]]
              [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork]]
-             [output :refer [create-output-buffers draw-output]]
+             [output :refer [create-output-buffers draw-output
+                             invalidate-output!]]
              [profile :refer [read-profile]]
-             [radar-util :refer [update-aircraft]]
+             [radar-util :refer [redraw update-aircraft]]
              [schemes :as schemes]
              [scene :refer [XScene get-center get-lon-scale
                             get-magnetic-var loaded? draw-scene]]
@@ -109,7 +111,8 @@
      :input input}))
 
 (defn draw [state]
-  (let [radar @(:radar-state state)
+  (let [radar-atom (:radar-state state)
+        radar @radar-atom
         input @(:input state)
         input-mode (:mode input)
         {:keys [profile scene selected
@@ -170,7 +173,9 @@
     ;; draw output
     (q/with-translation [0 (- (q/height) 
                               bar-padding bar-text-size bar-padding)]
-      (draw-output radar))
+      (let [s (System/currentTimeMillis)]
+        (draw-output radar-atom)
+        (def duration (- (System/currentTimeMillis) s))))
     (q/with-translation [0 0] ;; can be translated as necessary
       (draw-weather radar)
       (when-let [shown-metar (:shown-metar radar)]
@@ -268,6 +273,11 @@
       :middleware [qm/pause-on-error qm/fun-mode setup-params])
     (position-window xradar (:win-position profile))
     (swap! state #(assoc % :sketch xradar))
+    (s/listen xradar 
+              :component-resized
+              (fn [_]
+                (invalidate-output! state)
+                (redraw state)))
     state))
 
 (defn- aircraft [cid lat lon]

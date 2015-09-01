@@ -12,9 +12,11 @@
 (deftest output-scroll-test
   (testing "Scroll by one"
     (let [machine {}
-          state (atom {:output-buffer (atom [1 2 3 4])
+          state (atom {:output-buffer (atom [{:text "1"} {:text "2"} 
+                                             {:text "3"} {:text "4"}])
                        :current-output :global
                        :output-scroll 0
+                       :output-metrics-cache {:chars-per-line 100}
                        :profile {:output-size 2}})]
       (output-scroll machine state 1)
       (is (= 1 (:output-scroll @state)))
@@ -31,9 +33,11 @@
       (is (= 0 (:output-scroll @state)))))
   (testing "Scroll to limits"
     (let [machine {}
-          state (atom {:output-buffer (atom [1 2 3 4])
+          state (atom {:output-buffer (atom [{:text "1"} {:text "2"} 
+                                             {:text "3"} {:text "4"}])
                        :current-output :global
                        :output-scroll 0
+                       :output-metrics-cache {:chars-per-line 100}
                        :profile {:output-size 2}})]
       (output-scroll machine state 99999)
       (is (= 2 (:output-scroll @state)))

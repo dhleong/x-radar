@@ -35,10 +35,11 @@
 
 (deftest build-output-test
   (testing "Lines"
-    (let [built (build-output 5 chars-per-line [multi-line-entry])]
+    (let [built (build-output chars-per-line [multi-line-entry])]
       (is (= multi-line-result built))))
-  (testing "Too many lines"
-    (let [built (build-output 1 chars-per-line [multi-line-entry])]
+  ;; NB: build-output does ALL lines now
+  #_(testing "Too many lines"
+    (let [built (build-output chars-per-line [multi-line-entry])]
       (is (= [(first multi-line-result)] built)))))
 
 (deftest calculate-scroll-test
@@ -111,16 +112,16 @@
     (testing "Filter to private with CID"
       (set-active! state 42)
       (is (= 42 (:current-output @state)))
-      (is (= 1 (buffer-count state)))
+      (is (= 1 (buffer-count 30 state)))
       (is (= "Private" (-> (get-active-buffer @state) first :text))))
     (testing "Include All with :global"
       (set-active! state :global)
       (is (= :global (:current-output @state)))
-      (is (= 2 (buffer-count state)))
+      (is (= 2 (buffer-count 30 state)))
       (is (= "Global" (-> (get-active-buffer @state) first :text)))
       (is (= "<PL> Private" (-> (get-active-buffer @state) second :text))))
     (testing "New CID doesn't break"
       (set-active! state 9001)
       (is (= 9001 (:current-output @state)))
-      (is (= 0 (buffer-count state)))
+      (is (= 0 (buffer-count 30 state)))
       (is (= [] (get-active-buffer @state))))))
