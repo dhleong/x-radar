@@ -3,13 +3,28 @@
   xradar.bindings
   (:require [clojure
              [edn :as edn]
-             [string :refer [split]]]
+             [string :refer [split upper-case]]]
             [clojure.java.io :as io]
             [xradar
              [alias :refer [parse-alias]]
              [util :refer [deep-merge]]]))
 
 (def default-bindings-filename "default-bindings.edn")
+
+(defmulti parse-setting (fn [setting value] setting))
+(defmethod parse-setting :arrivals 
+  [setting value]
+  (parse-setting :departures value))
+(defmethod parse-setting :departures
+  [setting value]
+  (set
+    (cond
+      (string? value) (split (upper-case value) #" +")
+      (seq value) (map (comp name upper-case) value)
+      :else [])))
+(defmethod parse-setting :default
+  [setting value]
+  value)
 
 (defn- read-map
   "Read a key mapping"
@@ -27,8 +42,9 @@
 (defn- read-set
   "Read a setting"
   [parts value]
-  (let [[_ setting] parts]
-    {(keyword setting) value}))
+  (let [[_ setting] parts
+        setting-key (keyword setting)]
+    {setting-key (parse-setting setting-key value)}))
 
 (defn- read-binding
   [tag value]

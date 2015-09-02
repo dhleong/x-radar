@@ -42,3 +42,33 @@
                       :body "Cleared as filed"
                       :parts ["Cleared" "as" "filed"]}}
              result)))))
+
+(deftest arrivals-departures-test
+  (testing "List of symbols"
+    (let [result (settings "#set/arrivals (KLGA)")]
+      (is (= {:arrivals #{"KLGA"}} result)))
+    (let [result (settings "#set/departures (KLGA KJFK)")]
+      (is (= {:departures #{"KLGA" "KJFK"}} result))))
+  (testing "List of strings"
+    (let [result (settings "#set/arrivals (\"KLGA\")")]
+      (is (= {:arrivals #{"KLGA"}} result)))
+    (let [result (settings "#set/departures (\"KLGA\" \"KJFK\")")]
+      (is (= {:departures #{"KLGA" "KJFK"}} result))))
+  (testing "Vectors"
+    (let [result (settings "#set/arrivals [KLGA]")]
+      (is (= {:arrivals #{"KLGA"}} result)))
+    (let [result (settings "#set/arrivals [\"KLGA\"]")]
+      (is (= {:arrivals #{"KLGA"}} result)))
+    (let [result (settings "#set/departures [\"KLGA\" \"KJFK\"]")]
+      (is (= {:departures #{"KLGA" "KJFK"}} result))))
+  (testing "Mixed strings and symbols"
+    (let [result (settings "#set/departures [klga \"kjFK\"]")]
+      ;; also coerce names to upper-case
+      (is (= {:departures #{"KLGA" "KJFK"}} result))))
+  (testing "Space-separated string"
+    (let [result (settings "#set/arrivals \"KLGA\"")]
+      ;; mixed strings and symbols
+      (is (= {:arrivals #{"KLGA"}} result)))
+    (let [result (settings "#set/departures \"klga kjFK\"")]
+      ;; also coerce the names to upper-case
+      (is (= {:departures #{"KLGA" "KJFK"}} result)))))

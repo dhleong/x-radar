@@ -54,9 +54,8 @@
 (defn- fill-profile
   "Ensure some defaults exist in the profile"
   [profile]
-  (deep-merge {:fields 
-               {:arrive ["KLGA"]
-                :depart ["KLGA"]}
+  (deep-merge {:arrivals []
+               :departures []
                :draw [:geo :labels]
                :mode (create-mode)
                :output-size 5

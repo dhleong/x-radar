@@ -21,11 +21,11 @@
 (def max-bays 2)
 
 (defn resolve-flight-type
-  [fields craft]
+  [profile craft]
   (let [depart (:depart craft)
         arrive (:arrive craft)
-        arrive-fields (set (:arrive fields))
-        depart-fields (set (:depart fields))
+        arrive-fields (:arrivals profile)
+        depart-fields (:departures profile)
         arriving? (contains? arrive-fields arrive)
         departing? (contains? depart-fields depart)]
     (cond 
@@ -186,8 +186,10 @@
                 (render-strip
                   scheme
                   (assoc craft 
-                         :flight-type (resolve-flight-type (:fields profile)
-                                                           craft)
+                         :flight-type 
+                         (resolve-flight-type 
+                           profile
+                           craft)
                          :selected selected))
                 ;; is it a separator?
                 (string? cid)
