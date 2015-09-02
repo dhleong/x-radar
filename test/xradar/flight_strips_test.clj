@@ -2,8 +2,8 @@
   (:require [clojure.test :refer :all]
             [xradar.flight-strips :refer :all]))
 
-(def fields {:arrive ["KLGA"]
-             :depart ["KLGA"]})
+(def fields {:arrivals #{"KLGA"}
+             :departures #{"KLGA"}})
 
 (defn move
   [bay dir]
