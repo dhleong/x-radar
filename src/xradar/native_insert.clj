@@ -52,14 +52,15 @@
 
 
 (defn- key-handler
-  [on-submit on-cancel key-event]
+  [on-submit on-cancel on-change key-event]
   (def last-event key-event)
   (def last-event-code (.getKeyCode key-event))
   (let [root (s/to-root key-event)
         input (s/select root [:#input])
+        key-code (.getKeyCode key-event)
         {:keys [scrollback history]} 
          (s/user-data input)]
-    (case (.getKeyCode key-event)
+    (case key-code
       ;; tab; try to hop between numbered vars
       9 (let [mods (.getModifiers key-event)
               dir (if (= InputEvent/SHIFT_MASK mods)
@@ -120,7 +121,8 @@
 (defn create-insert
   "Create the insert mode box,
   with the given callbacks"
-  [state x y w & {:keys [prompt history on-submit on-cancel]}]
+  [state x y w & {:keys [prompt history 
+                         on-submit on-cancel on-change]}]
   {:pre [(function? on-submit) (function? on-cancel)]}
   (let [input 
         (doto
@@ -130,11 +132,17 @@
                         :history history}
             :listen 
             [:key-pressed #(try
-                             (key-handler on-submit on-cancel %)
+                             (key-handler on-submit on-cancel on-change %)
                              (catch Exception e
                                (def last-exc e)))
              :key-released #(try
                               (alias-expander state %)
+                              (let [key-code (.getKeyCode %)]
+                                (when (and (not= 10 key-code)
+                                           (not= 27 key-code))
+                                  ;; if not a submit or a cancel event, 
+                                  ;;  notify the change
+                                  (on-change (.trim (s/value %)))))
                               (catch Exception e
                                 (def last-exc e)))])
           (.setFocusTraversalKeysEnabled false))

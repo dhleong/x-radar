@@ -33,10 +33,12 @@
   the given objects
   `items` is a list"
   [items callback]
-  (reduce
-    deep-merge
-    (map
-      (fn [[key-1 key-2] item]
-        {key-1 {key-2 {:call `(~callback ~item)}}})
-      (pairs)
-      items)))
+  (if-let [seqd (seq items)]
+    (reduce
+      deep-merge
+      (map
+        (fn [[key-1 key-2] item]
+          {key-1 {key-2 {:call `(~callback ~item)}}})
+        (pairs)
+        items))
+    {}))

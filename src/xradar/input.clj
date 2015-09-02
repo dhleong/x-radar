@@ -58,6 +58,7 @@
                   27 "ESC"
                   9 "TAB"
                   45 (str (:raw-key event))
+                  47 "SLASH"
                   59 "colon" ;; NB it will always be shifted, so...
                   61 (str (:raw-key event))
                   ;; default; fetch

@@ -4,6 +4,7 @@
 
 #map/normal/<colon> start-command
 #map/normal/i start-insert
+#map/normal/<slash> start-search-aircraft
 #map/normal/s start-select-aircraft
 
 #map/normal/a add-strip

@@ -51,6 +51,7 @@
            (cons message history)))
   (send-chat! state message))
 
+
 ;;
 ;; Util methods and macros
 ;;
@@ -140,9 +141,15 @@
   and `value` is the string value provided by the user.
   If an updated machine is not provided, we will perform
   a switch into :normal mode
+  `on-change` if provided should be a (fn [state value])
+  where `state` is the usual command arg (Note that you 
+  cannot alter the machine from `on-change`!) and `value`
+  is the current input from the user.
   `cancel-mode` should be the keyword for a mode to return
   to on cancel. If not provided, defaults to `:normal`"
-  [machine state & {:keys [history prompt on-submit cancel-mode]}]
+  [machine state & {:keys [history prompt 
+                           on-submit on-change
+                           cancel-mode]}]
   (let [{:keys [x y]} (get-location state)
         selected-id (:selected @state)
         selected (get (:aircraft @state) selected-id nil)
@@ -160,7 +167,8 @@
             (not (nil? selected))) (str ">" (:callsign selected))
           (not= :global active-chat) (str ">" (:callsign active-chat))
           :else nil)
-        submit-handler (or on-submit default-input-submit)]
+        submit-handler (or on-submit default-input-submit)
+        change-handler (or on-change (constantly nil))]
     (assoc moded
            :insert-box 
            (create-insert 
@@ -171,6 +179,10 @@
              :prompt my-prompt
              :history (or history @(:history-insert @state))
              :on-cancel #(with-machine (to-mode (or cancel-mode :normal)))
+             :on-change #(try
+                           (change-handler state %)
+                           (catch Exception e
+                             (def last-change-exc e)))
              :on-submit 
              #(let [result 
                     (try
@@ -232,6 +244,50 @@
   [machine state & args]
   (apply sm/start machine state args))
 
+;;
+;; Search mode
+;;
+
+(declare cancel-toggle-chat)
+(declare select-aircraft)
+
+(defn- search-filtered-aircraft
+  [state search-filter]
+  (filter 
+    #(.contains (:callsign %) search-filter)
+    (vals (:aircraft @state))))
+
+(defn- select-aircraft-filter
+  "Start or update select mode with
+  aircraft, based on a search param"
+  [state search-filter & [machine]]
+  (let [targets (search-filtered-aircraft state search-filter)]
+    (redraw state)
+    (start-select (or machine {}) state
+                  :items targets
+                  :to-string #(:callsign %)
+                  :on-cancel 'cancel-toggle-chat
+                  :on-select 'select-aircraft)))
+
+
+(defn start-search-aircraft
+  ([machine state]
+   (let [targets (vals (:aircraft @state))
+         insert-mac
+         (start-insert machine state
+                       :prompt " /"
+                       :history []
+                       :on-change select-aircraft-filter
+                       :on-submit start-search-aircraft)
+         select-mac
+         (select-aircraft-filter state "")]
+     (merge insert-mac select-mac)))
+  ([machine state search-param]
+   (let [targets (search-filtered-aircraft state search-param)]
+     (case (count targets)
+       0 (notify-mode :normal "No matching aircraft")
+       1 (select-aircraft machine state (first targets))
+       (select-aircraft-filter state search-param machine)))))
 
 ;;
 ;; Output navigation
@@ -265,10 +321,13 @@
            :current-bindings aircraft-selections)))
 
 (defn select-aircraft
-  [machine state cid]
-  (swap! state #(assoc % 
-                       :selected cid 
-                       :craft-bindings {}))
+  [machine state cid-or-object]
+  (let [cid (if (map? cid-or-object)
+              (:cid cid-or-object)
+              cid-or-object)]
+    (swap! state #(assoc % 
+                        :selected cid 
+                        :craft-bindings {})))
   (to-mode :normal))
 
 ;;

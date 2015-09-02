@@ -54,18 +54,21 @@
         with-prompt (if-let [prompt (:select-prompt radar)]
                       (cons prompt lines)
                       lines)
-        radius (* text-size (count with-prompt))]
+        radius (* text-size (count with-prompt))
+        first-line (+ text-size (- center-y radius))]
     (q/rect-mode :radius)
     (q/stroke-int (-> scheme :output :text))
     (with-alpha q/fill-int (-> scheme :output :background))
     (q/rect center-x center-y center-x radius)
     (q/fill-int (-> scheme :output :text))
-    (loop [lines with-prompt
-           offset (+ text-size (- center-y radius))]
-      (when-let [line (first lines)]
-        (q/text line center-x offset)
-        (recur (rest lines)
-               (+ offset text-size))))))
+    (if (seq lines)
+      (loop [lines with-prompt
+             offset first-line]
+        (when-let [line (first lines)]
+          (q/text line center-x offset)
+          (recur (rest lines)
+                 (+ offset text-size))))
+      (q/text "No matches" center-x first-line))))
 
 (defn start
   "Start selection mode.
@@ -76,10 +79,12 @@
   for each item."
   [machine radar & {:keys [items
                            on-cancel on-select
-                           prompt to-string]}]
+                           prompt to-string
+                           require-items]
+                    :or {require-items true}}]
   {:pre [(not-nil? on-cancel)
          (not-nil? on-select)
-         (seq items)]}
+         (or (false? require-items) (seq items))]}
   (let [bindings (to-bindings items on-select)
         string-pred (or to-string str)]
     (swap! radar 
@@ -87,6 +92,12 @@
                    :select-bindings (from-bindings bindings)
                    :select-to-string string-pred
                    :select-prompt prompt))
+    (try
+      (def last-bindings (assoc bindings
+                                :esc {:call on-cancel}))
+      (def last-m machine)
+      (catch Exception e
+        (def last-e e)))
     (assoc machine
            :mode :select
            :current-bindings 
