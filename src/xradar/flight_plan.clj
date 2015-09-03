@@ -8,6 +8,8 @@
              [network :refer [update-flightplan]]
              [radar-util :refer [update-aircraft]]]))
 
+(def flight-rule-types [:ifr :vfr :svfr :dvfr])
+
 (defmacro field
   [label field-key & opts]
   (let [given-constraint (odd? (count opts))
@@ -75,7 +77,10 @@
   [state cid]
   (let [craft (get-in @state [:aircraft cid])
         scratch-field (field "Scratchpad:" :scratch)
-        scratchpad (-> scratch-field last first)]
+        scratchpad (-> scratch-field last first)
+        flight-rules-box (s/combobox 
+                           :id :rules
+                           :model flight-rule-types)]
     (-> (s/frame 
           :title (str "Flight Plan - " (:callsign craft))
           :menubar
@@ -95,7 +100,7 @@
               (field "Callsign:" :callsign :editable? false)
               (field "A/C Type:" :type)
               [["Flight Rules:" "right"]
-               [(s/text :text (str (:rules craft))) "grow"]]
+               [flight-rules-box "grow"]]
               [[(s/button :text "Amend Plan"
                           :listen [:action #(amend-plan-handler state cid %)])
                 "grow"]]
@@ -125,4 +130,5 @@
         (s/move! :to [100 100])
         s/pack!
         s/show!)
+    (s/selection! flight-rules-box (or (:rules craft) :ifr))
     (s/request-focus! scratchpad)))
