@@ -21,8 +21,8 @@
 
 (defn get-location
   "Get the location on the screen of the radar window"
-  [radar-atom]
-  (let [point (-> @radar-atom
+  [state]
+  (let [point (-> @state
                   :sketch
                   .getLocationOnScreen)]
     {:x (.getX point) :y (.getY point)}))
@@ -36,14 +36,22 @@
 
 (defn redraw
   "Schedule a redraw from anywhere"
-  [radar-atom]
-  (if-let [sketch (:sketch @radar-atom)]
+  [state]
+  (if-let [sketch (:sketch @state)]
     (.redraw sketch)))
 
 (defn update-aircraft
-  [radar-atom craft]
+  [state craft]
+  (when-not (contains? (:aircraft @state) (:cid craft))
+    ;; new aircraft. Do we care about it?
+    (let [profile (:profile @state)
+          arrivals (:arrivals profile)
+          departures (:departures profile)]
+      (when (or (contains? arrivals (:arrive craft))
+                (contains? departures (:depart craft)))
+        (request-attention!))))
   (swap! 
-    radar-atom
+    state
     (fn [radar craft] 
       (let [cid (:cid craft)
             old-craft (get-in radar [:aircraft cid])
@@ -56,11 +64,11 @@
                                    :y (:y old-craft)})
                             (take max-history))})
             mapped (merge craft history mapped-coord)]
-        (redraw radar-atom)
+        (redraw state)
         (deep-merge radar {:aircraft {cid mapped}})))
     craft)
     ;; return the updated aircraft
-    (get-in @radar-atom [:aircraft (:cid craft)]))
+    (get-in @state [:aircraft (:cid craft)]))
 
 (defn destroy-radar [radar]
   (applet-close (:sketch @radar)))

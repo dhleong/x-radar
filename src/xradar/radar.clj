@@ -290,11 +290,13 @@
    :squawking (case cid
                 2 "2500"
                 3 "1200"
-                4 "0000")
+                4 "0000"
+                "0000")
    :squawking-mode (case cid
                      2 :normal
                      3 :normal
-                     4 :standby)
+                     4 :standby
+                     :standby)
    :tracked-by nil ;; eg "A"
    :remarks "/v/" :rules :ifr})
 
