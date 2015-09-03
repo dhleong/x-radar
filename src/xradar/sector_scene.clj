@@ -336,12 +336,7 @@
   (let [data (meta shape)
         color (:color data)
         [l t r b] (:bounds data)]
-    (when (or (in-bounds l t)
-              (in-bounds r t)
-              (in-bounds l b)
-              (in-bounds r b)
-              (in-bounds (/ (- r l) 2) 
-                         (/ (- b t) 2)))
+    (when (in-bounds (:bounds data))
       (q/no-fill)
       (q/stroke-int color)
       (q/stroke-weight 1)

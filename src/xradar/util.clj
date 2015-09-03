@@ -71,13 +71,30 @@
   "Check if a coordinate is within the bounds
   of the currently visible area. Only works
   inside sketch functions"
-  [x y]
-  (let [w (q/width)
-        h (q/height)
-        sx (q/screen-x x y)
-        sy (q/screen-y x y)]
-    (and (<= 0 sx w)
-         (<= 0 sy h))))
+  ([x y]
+   (let [w (q/width)
+         h (q/height)
+         sx (q/screen-x x y)
+         sy (q/screen-y x y)]
+     (and (<= 0 sx w)
+          (<= 0 sy h))))
+  ([rect]
+   (let [[rl rt rr rb] rect
+         w (q/width)
+         h (q/height)
+         l (q/screen-x rl rt)
+         t (q/screen-y rl rt)
+         r (q/screen-x rr rb)
+         b (q/screen-y rr rb)]
+     ;; rects overlap if:
+     ;;  a.l <= b.r AND
+     ;;  a.r >= b.l AND
+     ;;  a.t <= b.b AND
+     ;;  a.b >= b.t
+     (and (<= l w)
+          (>= r 0)
+          (<= t h)
+          (>= b 0)))))
 
 (defn list-replace
   "Replace `old-value` with `new-value` in `coll`"
