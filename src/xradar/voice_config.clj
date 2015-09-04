@@ -39,11 +39,11 @@
                         (>= col first-box-column))}))
 
 (defn- save-action
-  [radar]
+  [state]
   (fn [e]
     (let [frame (s/to-frame e)
           table (s/select frame [:#items])
-          old-connections (get (:profile @radar) :voice [])
+          old-connections (get (:profile @state) :voice [])
           selected-index (s/selection table)
           selection (if (nil? selected-index)
                       nil
@@ -52,7 +52,7 @@
           new-connections (if selection
                             (list-replace selection conn-value old-connections)
                             (cons conn-value old-connections))]
-      (update-profile radar :voice new-connections)
+      (update-profile state :voice new-connections)
       (when-not selection
         (s/value! frame (zipmap text-value-fields
                                 (repeat ""))))
@@ -63,15 +63,15 @@
         (insert-at! table 0 conn-value)))))
 
 (defn- delete-action
-  [radar]
+  [state]
   (fn [e]
     (let [frame (s/to-frame e)
           table (s/select frame [:#items])
-          old-connections (get (:profile @radar) :voice [])
+          old-connections (get (:profile @state) :voice [])
           selected-index (s/selection table)
           selection (nth old-connections selected-index)
           new-connections (vec (remove (partial = selection) old-connections))]
-      (update-profile radar :voice new-connections)
+      (update-profile state :voice new-connections)
       (try
         (remove-at! table selected-index)
         (catch NullPointerException e
