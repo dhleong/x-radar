@@ -3,7 +3,6 @@
   xradar.connection-config
   (:require [seesaw
              [bind :as b]
-             [cells :refer [to-cell-renderer]]
              [core :as s]
              [mig :refer [mig-panel]]]
             [xradar

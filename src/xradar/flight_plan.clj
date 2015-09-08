@@ -1,7 +1,8 @@
 (ns ^{:author "Daniel Leong"
       :doc "Flight plan editing"}
   xradar.flight-plan
-  (:require [seesaw
+  (:require [clojure.string :refer [upper-case]] 
+            [seesaw
              [core :as s]
              [mig :refer [mig-panel]]]
             [xradar
@@ -80,7 +81,14 @@
         scratchpad (-> scratch-field last first)
         flight-rules-box (s/combobox 
                            :id :rules
-                           :model flight-rule-types)]
+                           :model flight-rule-types
+                           :renderer
+                           (fn [renderer info]
+                             (s/config! renderer
+                                        :text (-> info
+                                                  :value 
+                                                  name
+                                                  upper-case))))]
     (-> (s/frame 
           :title (str "Flight Plan - " (:callsign craft))
           :menubar
