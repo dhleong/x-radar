@@ -116,13 +116,29 @@
 ;;
 
 (defn draw-weather
+  "Draws the weather and shifts the matrix to 
+  start to the right of the last weather box
+  (like all top-bar things should)."
   [radar]
   (q/text-size text-size)
   (q/rect-mode :corner)
   (let [scheme (-> radar :profile :scheme)
         height (+ (q/text-ascent)
                   (q/text-descent))]
-    (q/push-matrix)
+    ;; are we showing a metar?
+    (when-let [shown-metar (:shown-metar radar)]
+      (q/text-size text-size)
+      (let [metar (str
+                    " "
+                    (or (:raw (metar-for shown-metar)) "---")
+                    " ")]
+        (q/with-translation [0 height]
+          (with-alpha q/fill-int (-> scheme :output :background))
+          (q/stroke-int (-> scheme :output :text))
+          (q/rect-mode :corner)
+          (q/rect 0 0 (q/text-width metar) height)
+          (q/fill-int (-> scheme :output :text))
+          (q/text metar 0 text-size))))
     (doseq [icao @weather-watches]
       (let [line (str " " icao ": " 
                       (or (winds-for icao) "---")
@@ -144,6 +160,5 @@
         (q/no-fill)
         (q/stroke-weight 1)
         (q/rect 0 0 width height)
-        (q/translate [width 0])))
-    (q/pop-matrix)))
+        (q/translate [width 0])))))
 
