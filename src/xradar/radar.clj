@@ -14,7 +14,7 @@
              [flight-strips :refer [create-strip-bay render-strip-bay]]
              [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork]]
-             [notif :refer [draw-notifs]]
+             [notif :refer [ack-attention! draw-notifs]]
              [output :refer [create-output-buffers draw-output
                              invalidate-output!]]
              [profile :refer [read-profile]]
@@ -208,6 +208,7 @@
 
 (defn on-gain-focus [state]
   (q/redraw)
+  (ack-attention!)
   (reset-modifiers! (:input state))
   state)
 

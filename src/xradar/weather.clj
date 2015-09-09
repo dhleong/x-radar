@@ -125,6 +125,7 @@
   (let [scheme (-> radar :profile :scheme)
         height (+ (q/text-ascent)
                   (q/text-descent))]
+    (q/fill-int (-> scheme :output :text))
     ;; are we showing a metar?
     (when-let [shown-metar (:shown-metar radar)]
       (q/text-size text-size)
@@ -149,8 +150,7 @@
             is-acked? (acked? icao)
             color (if is-acked?
                     (-> scheme :output :text)
-                    (-> scheme :output :private)
-                    )]
+                    (-> scheme :output :private))]
         (q/no-stroke)
         (with-alpha q/fill-int (-> scheme :output :background))
         (q/rect 0 0 width height)

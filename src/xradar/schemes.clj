@@ -16,6 +16,7 @@
     :box 0xffEEEEEE}
    :output
    {:background 0xcc36363F
+    :background-highlight 0xaaFFFFFF
     :outgoing 0xffFFFFFF
     :private 0xff4DE5FF
     :success 0xff00EE00

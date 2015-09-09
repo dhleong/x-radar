@@ -23,6 +23,11 @@
         (filter #(= cid (:cid %)))
         first)))
 
+(defn in-focus?
+  "Returns true if any xRadar window is in focus."
+  []
+  (some true? (map #(.isActive %) (s/all-frames))))
+
 
 (defn when-all-set-enabled
   "When all views with provided ids match
