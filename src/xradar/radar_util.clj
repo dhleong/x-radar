@@ -11,6 +11,7 @@
 
 (def max-history 5)
 
+
 (defn get-location
   "Get the location on the screen of the radar window"
   [state]
@@ -25,16 +26,55 @@
   (if-let [sketch (:sketch @state)]
     (.redraw sketch)))
 
+(defn apply-concat
+  [parts]
+  (apply concat parts))
+
+(defn strips
+  "Returns the set of CIDs for strips being followed.
+  Here to prevent circular dependencies (and also it's
+  not commonly needed)"
+  [state]
+  (some-> @state
+          :strips
+          deref
+          (select-keys [0 1])
+          vals
+          apply-concat
+          set))
+
+(defn request-attention-if-needed!
+  [state craft]
+  (let [radar @state
+        aircraft (:aircraft radar)
+        cid (:cid craft)] 
+    ;; existing aircraft that finally gets an FP?
+    (when (and
+            (contains? (strips state) cid)
+            (empty? (:route (get aircraft cid)))
+            (not (empty? (:route craft))))
+      (if (= :strips (:mode @(:input radar)))
+        ;; when in strips mode, don't be topical
+        (request-attention!
+          :is-critical true)
+        (request-attention!
+          :topic :fp 
+          :is-critical true)) 
+      (redraw state))
+    ;; new aircraft?
+    (when-not (contains? aircraft cid)
+      ;; new aircraft. Do we care about it?
+      (let [profile (:profile radar)
+            arrival? (contains? (:arrivals profile) (:arrive craft))
+            departure? (contains? (:departures profile) (:arrive craft))]
+        (when (or arrival? departure?)
+          (request-attention! 
+            :topic (if arrival? :arrival :departure)
+            :is-critical true))))))
+
 (defn update-aircraft
   [state craft]
-  (when-not (contains? (:aircraft @state) (:cid craft))
-    ;; new aircraft. Do we care about it?
-    (let [profile (:profile @state)
-          arrivals (:arrivals profile)
-          departures (:departures profile)]
-      (when (or (contains? arrivals (:arrive craft))
-                (contains? departures (:depart craft)))
-        (request-attention!))))
+  (request-attention-if-needed! state craft)
   (swap! 
     state
     (fn [radar craft] 

@@ -19,6 +19,7 @@
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
                               get-controllers push-strip!]]
+             [notif :refer [ack-attention!]]
              [output :refer [append-output 
                              get-active get-active-buffer 
                              scroll-output! set-active!]]
@@ -651,8 +652,11 @@
   (let [new-mode 
         (case (:mode machine)
           :strips :normal
-          :strips)] 
-    (if (and (= :strips new-mode)
+          :strips)
+        in-strips? (= :strips new-mode)] 
+    (when in-strips?
+      (ack-attention! :fp))
+    (if (and in-strips?
              (fs/bays-empty? (:strips @state)))
       (notify-mode :normal "No flight strips")
       (to-mode new-mode))))

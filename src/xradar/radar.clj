@@ -38,6 +38,8 @@
 (def fps 30)
 (def renderer :opengl)
 
+(def strips-bay-offset [20 20])
+
 ;; NB we disable looping and just redraw
 ;;  to avoid pegging the CPU. If you don't
 ;;  care, you can loop for faster redraw
@@ -154,7 +156,8 @@
               (- (q/height) bar-padding)))
     (case input-mode
       ;; flight strips mode
-      :strips (render-strip-bay radar)
+      :strips (q/with-translation strips-bay-offset
+               (render-strip-bay radar))
       ;; selection mode
       :select (render-selections radar)
       ;; default; do nothing

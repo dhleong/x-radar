@@ -30,10 +30,10 @@
     {:background 0xffCCCCCC
      :text 0xff000000}
     :foreground 0xff000000
-    :arrival 0xffCFAFBF
-    :departure 0xffB1ACD0
-    :local 0xffDFDF9F
-    :over 0xffE5B39C
-    :noplan 0xffCCCCCC
-    :unknown 0xffCCCCCC
-    :vfr 0xffCADFD5}})
+    :arrival 0xccCFAFBF
+    :departure 0xccB1ACD0
+    :local 0xccDFDF9F
+    :over 0xccE5B39C
+    :noplan 0xccCCCCCC
+    :unknown 0xccCCCCCC
+    :vfr 0xccCADFD5}})
