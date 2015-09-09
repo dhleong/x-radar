@@ -14,6 +14,7 @@
              [flight-strips :refer [create-strip-bay render-strip-bay]]
              [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork]]
+             [notif :refer [draw-notifs]]
              [output :refer [create-output-buffers draw-output
                              invalidate-output!]]
              [profile :refer [read-profile]]
@@ -176,6 +177,7 @@
         (def duration (- (System/currentTimeMillis) s))))
     ;; top bar stuff
     (q/with-translation [0 0] ;; can be translated as necessary
+      (draw-notifs radar)
       (draw-weather radar))
     ;; debugging
     (when (-> radar :profile :debug)

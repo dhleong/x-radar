@@ -5,19 +5,11 @@
              [core :as q]
              [applet :refer [applet-close]]]
             [seesaw.core :refer [invoke-later]]
-            [xradar.util :refer [deep-merge map-coord]]))
+            [xradar
+             [notif :refer [request-attention!]]
+             [util :refer [deep-merge map-coord]]]))
 
 (def max-history 5)
-
-(defn osx-app []
-  (try
-    (let [app-class (Class/forName "com.apple.eawt.Application")
-          getter (.getMethod app-class "getApplication" (into-array Class []))]
-      (.invoke getter nil (into-array [])))
-    (catch Exception e
-      ;; not OSX, or OSX extensions missing
-      (println e)
-      nil)))
 
 (defn get-location
   "Get the location on the screen of the radar window"
@@ -26,13 +18,6 @@
                   :sketch
                   .getLocationOnScreen)]
     {:x (.getX point) :y (.getY point)}))
-
-(defn request-attention!
-  "Request attention to the app when not focused"
-  [& {:keys [is-critical] :or {is-critical false}}]
-  ;; TODO how does windows/linux want to handle this?
-  (when-let [app (osx-app)]
-    (.requestUserAttention app is-critical)))
 
 (defn redraw
   "Schedule a redraw from anywhere"

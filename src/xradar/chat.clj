@@ -8,7 +8,7 @@
              [output :refer [append-output]]
              [network :refer [connected? get-controllers 
                               my-callsign send! send-to!]]
-             [radar-util :refer [request-attention!]]
+             [notif :refer [request-attention!]]
              [util :refer [object-for with-alpha]]]))
 
 
