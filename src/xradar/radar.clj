@@ -183,6 +183,9 @@
     (q/with-translation [0 0] ;; can be translated as necessary
       (draw-notifs radar)
       (draw-weather radar))
+    ;; lists
+    (q/with-translation [0 40]
+      (render-lists radar))
     ;; debugging
     (when (-> radar :profile :debug)
       (q/with-translation [0 30]
@@ -237,19 +240,20 @@
   {:pre [(satisfies? XRadarNetwork network)
          (satisfies? XScene scene)]}
   (let [profile (fill-profile raw-profile)
-        state (atom (deep-merge
-                      {:functions alias-functions
-                       :history-command (atom [])
-                       :history-insert (atom [])
-                       :network network
-                       :profile profile
-                       :output-scroll 0
-                       :scene scene
-                       :strips (create-strip-bay)
-                       :variables alias-variables
-                       :aircraft {}}
-                      (create-lists)
-                      (create-output-buffers)))]
+        state (atom (reduce
+                      deep-merge
+                      [{:functions alias-functions
+                        :history-command (atom [])
+                        :history-insert (atom [])
+                        :network network
+                        :profile profile
+                        :output-scroll 0
+                        :scene scene
+                        :strips (create-strip-bay)
+                        :variables alias-variables
+                        :aircraft {}}
+                       (create-lists)
+                       (create-output-buffers)]))]
     (q/defsketch xradar
       :title "xRadar"
       :setup setup
