@@ -12,6 +12,7 @@
                             process-input-press process-input-release
                             reset-modifiers!]]
              [flight-strips :refer [create-strip-bay render-strip-bay]]
+             [lists :refer [create-lists render-lists]]
              [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork]]
              [notif :refer [ack-attention! draw-notifs]]
@@ -240,13 +241,14 @@
                       {:functions alias-functions
                        :history-command (atom [])
                        :history-insert (atom [])
-                       :profile profile
                        :network network
+                       :profile profile
                        :output-scroll 0
                        :scene scene
                        :strips (create-strip-bay)
                        :variables alias-variables
                        :aircraft {}}
+                      (create-lists)
                       (create-output-buffers)))]
     (q/defsketch xradar
       :title "xRadar"

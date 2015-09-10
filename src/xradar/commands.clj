@@ -16,6 +16,7 @@
              [connection-config :refer [open-connection]]
              [flight-plan :refer [open-flight-plan]]
              [flight-strips :as fs]
+             [lists :refer [toggle-list]]
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
                               get-controllers push-strip!]]
@@ -447,6 +448,19 @@
 ;;
 ;; Window toggling
 ;;
+
+(defn toggle-arrivals
+  "Show/hide the list of arrivals"
+  [machine state]
+  (toggle-list state :arrivals)
+  (to-mode :normal))
+
+(defn toggle-departures
+  "Show/hide the list of departures"
+  [machine state]
+  (toggle-list state :departures)
+  (to-mode :normal))
+
 
 (defn toggle-flight-plan
   [machine state]
