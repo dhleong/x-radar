@@ -69,7 +69,7 @@
             departure? (contains? (:departures profile) (:arrive craft))]
         (when (or arrival? departure?)
           (request-attention! 
-            :topic (if arrival? :arrival :departure)
+            :topic (if arrival? :arrivals :departures)
             :is-critical true))))))
 
 (defn update-aircraft

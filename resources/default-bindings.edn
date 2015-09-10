@@ -26,7 +26,7 @@
 
 #map/normal/<esc> stop-insert
 
-; `od` is a TODO
+#map/normal/oa toggle-arrivals
 #map/normal/od toggle-departures
 #map/normal/of toggle-flight-strips
 #map/normal/os toggle-flight-strips

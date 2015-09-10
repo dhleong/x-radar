@@ -12,6 +12,7 @@
                             process-input-press process-input-release
                             reset-modifiers!]]
              [flight-strips :refer [create-strip-bay render-strip-bay]]
+             [lists :refer [create-lists render-lists]]
              [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork]]
              [notif :refer [ack-attention! draw-notifs]]
@@ -182,6 +183,9 @@
     (q/with-translation [0 0] ;; can be translated as necessary
       (draw-notifs radar)
       (draw-weather radar))
+    ;; lists
+    (q/with-translation [0 40]
+      (render-lists radar))
     ;; debugging
     (when (-> radar :profile :debug)
       (q/with-translation [0 30]
@@ -236,18 +240,20 @@
   {:pre [(satisfies? XRadarNetwork network)
          (satisfies? XScene scene)]}
   (let [profile (fill-profile raw-profile)
-        state (atom (deep-merge
-                      {:functions alias-functions
-                       :history-command (atom [])
-                       :history-insert (atom [])
-                       :profile profile
-                       :network network
-                       :output-scroll 0
-                       :scene scene
-                       :strips (create-strip-bay)
-                       :variables alias-variables
-                       :aircraft {}}
-                      (create-output-buffers)))]
+        state (atom (reduce
+                      deep-merge
+                      [{:functions alias-functions
+                        :history-command (atom [])
+                        :history-insert (atom [])
+                        :network network
+                        :profile profile
+                        :output-scroll 0
+                        :scene scene
+                        :strips (create-strip-bay)
+                        :variables alias-variables
+                        :aircraft {}}
+                       (create-lists)
+                       (create-output-buffers)]))]
     (q/defsketch xradar
       :title "xRadar"
       :setup setup
