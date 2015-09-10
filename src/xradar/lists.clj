@@ -21,23 +21,51 @@
   {:arrivals 
    {:title "Arrivals"
     :fields [:callsign "A" :arrive "TODO"] ;; TODO func to calculate distance
+    :widths [8 1 4 4]
     :source (source-for-fields :arrive :arrivals)}
    :departures 
    {:title "Departures"
     :fields [:callsign "D" :depart :squawk]
+    :widths [8 1 4 4]
     :source (source-for-fields :depart :departures)}})
 
 (defn create-lists
   []
-  (atom #{}))
+  {:lists (atom #{})})
 
 (defn items-for
   [radar source]
   (let [source-fn (get-in list-metas [source :source])]
     (source-fn radar)))
 
+(defmulti render-value 
+  "Get the raw value for the field of the given entry"
+  (fn [radar field entry] (class field)))
+(defmethod render-value java.lang.String
+  [radar field entry]
+  field)
+(defmethod render-value clojure.lang.Keyword
+  [radar field entry]
+  (field entry))
+(defmethod render-value :default
+  [radar field entry]
+  ;; assume it's a function
+  (field radar entry))
+
+(defn render-list-entry
+  "Returns a sequence of strings for each
+  field in the entry"
+  [radar source-config entry]
+  (map 
+    (fn [k w] 
+      (let [value (render-value radar k entry)]
+        (format (str "%-" w "s") value)))
+    (:fields source-config)
+    (:widths source-config)))
+
 (defn render-lists
   [state]
+  ;; TODO
   nil)
 
 (defn toggle-list

@@ -33,3 +33,39 @@
              :profile
              {:departures #{"KJFK"}}}
             :departures)))))
+
+(deftest render-value-test
+  (testing "Render String"
+    (is (= "The String" 
+           (render-value nil 
+                         "The String" 
+                         {:foo "bar"
+                          :biz "baz"}))))
+  (testing "Render Keyword"
+    (is (= "bar" 
+           (render-value nil 
+                         :foo 
+                         {:foo "bar"
+                          :biz "baz"}))))
+  (testing "Render Function"
+    (is (= "baz" 
+           (render-value nil 
+                         #(:biz %2)
+                         {:foo "bar"
+                          :biz "baz"})))))
+
+(deftest render-entry-test
+  (testing "Departure"
+    (let [aircraft {:cid 4 :squawk 1102
+                    :depart "KLGA"
+                    :arrive "KBOS"
+                    :callsign "ACA1234"}
+          radar {:aircraft {4 aircraft}}]
+      (is (= ["ACA1234 "
+              "D"
+              "KLGA"
+              "1102"]
+             (render-list-entry
+               radar
+               (:departures list-metas)
+               aircraft))))))
