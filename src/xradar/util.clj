@@ -13,7 +13,7 @@
 (set-current-implementation :vectorz) 
 
 (def coord-scale 10000)
-
+(def earth-radius-nm 3440)
 
 (defn- cid-to-controller
   [radar cid]
@@ -22,6 +22,30 @@
     (->> controllers
         (filter #(= cid (:cid %)))
         first)))
+
+(defn distance-between
+  "Calculate the distance between two scaled coordinates
+  in nautical miles"
+  ([p1 p2]
+   (let [lat1 (/ (:y p1) coord-scale)
+         lon1 (/ (:x p1) coord-scale)
+         lat2 (/ (:y p2) coord-scale)
+         lon2 (/ (:x p2) coord-scale)]
+     (distance-between lat1 lon1 lat2 lon2)))
+  ([lat1 lon1 lat2 lon2]
+   ;; adapted from: http://www.movable-type.co.uk/scripts/latlong.html
+   (let [ph1 (Math/toRadians lat1)
+         ph2 (Math/toRadians lat2)
+         del-ph (Math/toRadians (- lat2 lat1))
+         del-lm (Math/toRadians (- lon2 lon1))
+         a (+ (* (Math/sin (/ del-ph 2))
+                 (Math/sin (/ del-ph 2)))
+              (* (Math/cos ph1)
+                 (Math/cos ph2)
+                 (Math/sin (/ del-lm 2))
+                 (Math/sin (/ del-lm 2))))
+         c (* 2 (Math/atan2 (Math/sqrt a), (Math/sqrt (- 1 a))))]
+     (* earth-radius-nm c))))
 
 (defn in-focus?
   "Returns true if any xRadar window is in focus."

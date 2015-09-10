@@ -5,13 +5,23 @@
             [quil.core :as q]
             [xradar
              [notif :refer [ack-attention!]]
-             [util :refer [with-alpha]]]))
+             [scene :refer [find-point]]
+             [util :refer [distance-between with-alpha]]]))
 
 ;;
 ;; Constants
 ;;
 
 (def text-size 12)
+
+(defn distance-to-arrival
+  "Return an integer of distance in
+  nautical miles between the aircraft
+  and its arrival airport"
+  [radar entry]
+  (if-let [arrival (find-point (:scene radar) (:arrive entry))]
+    (int (distance-between entry (:coord arrival)))
+    "?"))
 
 (defn source-for-fields
   [craft-key fields-key]
@@ -26,7 +36,7 @@
 (def list-metas
   {:arrivals 
    {:title "Arrivals"
-    :fields [:callsign "A" :arrive "TODO"] ;; TODO func to calculate distance
+    :fields [:callsign "A" :arrive distance-to-arrival]
     :widths [8 1 4 4]
     :source (source-for-fields :arrive :arrivals)}
    :departures 
