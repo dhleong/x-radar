@@ -33,7 +33,8 @@
              [voice :as v]
              [voice-config :refer [open-voice-comms]]
              [weather :refer [mark-acked! unwatch-weather!
-                              watch-weather!]]])
+                              watch-weather!]]]
+            [xradar.modes.mode-util :as mu])
   (:import [java.io StringReader PushbackReader]))
 
 ;;
@@ -444,6 +445,31 @@
   [machine state]
   (commit-profile state)
   (doecho "Settings written to disk."))
+
+;;
+;; Info box manipulation
+;;
+
+(defn info-box-length
+  ([machine state]
+   (info-box-length machine state nil))
+  ([machine state adjustment]
+   (if-let [cid (:selected @state)]
+    (do
+      (mu/info-line-length! state cid adjustment)
+      (to-mode :normal))
+    (notify-mode :normal "You must select an aircraft to adjust its info box"))))
+
+(defn info-box-rotate
+  ([machine state]
+   (info-box-rotate machine state nil))
+  ([machine state adjustment]
+   (if-let [cid (:selected @state)]
+    (do
+      (mu/info-line-rotate! state cid adjustment)
+      (to-mode :normal))
+    (notify-mode :normal "You must select an aircraft to adjust its info box"))))
+
 
 ;;
 ;; Window toggling

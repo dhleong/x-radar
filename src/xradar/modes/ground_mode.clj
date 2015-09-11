@@ -43,15 +43,17 @@
 
 (defmulti draw-info-box (fn [scheme craft] (:state craft :untracked)))
 (defmethod draw-info-box :default [scheme craft]
-  (q/with-translation [(* 3 craft-radius-plus) 0]
-    (q/stroke-weight 1)
-    (q/line 0 0 line-width 0)
-    (q/translate (+ line-width line-margin) 0)
-    (q/text-size 12)
-    (q/text-align :left :bottom)
-    (q/text (create-line1 craft) 0 0)
-    (q/text-align :left :top)
-    (q/text (create-line2 craft) 0 0)))
+  (q/with-rotation [(Math/toRadians (or (:info-rotate craft) 0))]
+    (q/with-translation [(* 3 craft-radius-plus) 0]
+      (let [line-len (+ line-width (or (:info-length craft) 0))]
+        (q/stroke-weight 1)
+        (q/line 0 0 line-len 0)
+        (q/translate (+ line-len line-margin) 0)
+        (q/text-size 12)
+        (q/text-align :left :bottom)
+        (q/text (create-line1 craft) 0 0)
+        (q/text-align :left :top)
+        (q/text (create-line2 craft) 0 0)))))
 
 (defmulti my-aircraft (fn [scheme craft] (:state craft :untracked)))
 (defmethod my-aircraft :tracked [scheme craft]

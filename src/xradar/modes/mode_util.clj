@@ -2,11 +2,41 @@
       :doc "Utility methods for radar mode implementations"}
   xradar.modes.mode-util
   (:require [clojure.test :refer [function?]]
-            [quil.core :as q]))
+            [quil.core :as q]
+            [xradar
+             [radar-util :refer [update-aircraft]]
+             [util :refer [object-for]]]))
 
 (def mapping-offset-x (- 10))
 (def mapping-offset-y 0)
 (def mapping-text-size 14)
+
+(defn info-line-length!
+  [state cid adjustment]
+  (let [craft (object-for state cid)
+        new-length (if adjustment
+                     (max 0
+                          (+ adjustment
+                             (or (:info-length craft) 0)))
+                     nil)]
+    (update-aircraft
+      state 
+      {:cid cid
+       :info-length new-length})))
+
+(defn info-line-rotate!
+  [state cid adjustment]
+  (let [craft (object-for state cid)
+        new-value (if adjustment
+                    (mod (+ adjustment
+                            (or (:info-rotate craft) 0))
+                         360)
+                    nil)]
+    (update-aircraft
+      state 
+      {:cid cid
+       :info-rotate new-value})))
+
 
 (defn do-draw-aircraft
   "Helper for rendering an aircraft. Translates so the
