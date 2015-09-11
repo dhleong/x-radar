@@ -57,6 +57,7 @@
   (let [key-raw (case (:key-code event)
                   27 "ESC"
                   9 "TAB"
+                  32 "SPACE"
                   45 (str (:raw-key event))
                   47 "SLASH"
                   59 "colon" ;; NB it will always be shifted, so...
@@ -79,7 +80,6 @@
   [machine state branch]
   (let [call (:call branch)
         has-others (seq (->> branch keys (remove #(= % :call))))]
-    (def following {:c call :others? has-others :b branch})
     (cond 
       ;; a callable and no sub keys
       (and call (not has-others))
@@ -107,7 +107,7 @@
 
 (defn process-press
   "Process keypress. Returns the new value of the input machine"
-  [machine event state]
+  [machine state event]
   (case (:key event)
     :shift (add-modifier machine :shift)
     :alt (add-modifier machine :alt)
@@ -122,24 +122,29 @@
           current-sequence (conj 
                              (or (:current-sequence new-machine) [])
                              the-key)
-          sequenced-machine (assoc new-machine :current-sequence current-sequence)]
-      (def proc {:curb (:current-bindings machine)
-                 :bran (get current-bindings the-key)})
+          sequenced-machine (assoc new-machine 
+                                   :current-sequence current-sequence
+                                   :last-press modded-event)]
       (if-let [branch (get current-bindings the-key)]
         (follow-key-branch sequenced-machine state branch)
-        (pressed-in-mode (assoc sequenced-machine :last-press modded-event)
-                         state)))))
+        (pressed-in-mode sequenced-machine state)))))
 
-(defn- process-release
+(defn process-release
   "Process key release. Returns the new value of the input machine"
-  [machine event]
-  (case (:key event)
-    :shift (remove-modifier machine :shift)
-    :alt (remove-modifier machine :alt)
-    :command (remove-modifier machine :cmd)
-    :control (remove-modifier machine :ctrl)
-    ;; default
-    machine))
+  [machine state event]
+  (let [modded-event (translate-event machine event)
+        the-key (:key modded-event)]
+    (case the-key
+      :shift (remove-modifier machine :shift)
+      :alt (remove-modifier machine :alt)
+      :command (remove-modifier machine :cmd)
+      :control (remove-modifier machine :ctrl)
+      ;; default
+      (let [current-bindings (:current-bindings machine)
+            branch (get current-bindings the-key)]
+        (when (= 'transmit-voice (:call branch))
+          (c/eval-command machine state 'stop-transmit-voice))
+        machine))))
 
 
 ;;
@@ -154,13 +159,13 @@
 
 (defn process-input-press
   "Process key pressed and update the machine"
-  [machine-atom event state]
-  (swap! machine-atom process-press event state))
+  [machine-atom state event]
+  (swap! machine-atom process-press state event))
 
 (defn process-input-release
   "Process key released and update the machine"
-  [machine-atom event]
-  (swap! machine-atom process-release event))
+  [machine-atom state event]
+  (swap! machine-atom process-release state event))
 
 (defn reset-modifiers!
   "Clear the current set of modifiers"

@@ -30,6 +30,7 @@
              [selection :refer [to-bindings from-bindings]]
              [selection-mode :as sm]
              [util :refer [deep-merge in-bounds]]
+             [voice :as v]
              [voice-config :refer [open-voice-comms]]
              [weather :refer [mark-acked! unwatch-weather!
                               watch-weather!]]])
@@ -122,9 +123,7 @@
           ;; no such thing :(
           :else (notify-mode :normal
                              (str "No such command:" raw)))]
-    (def stuff {:raw-symbol raw-symbol?
-                :command command
-                :updated-machine updated-machine})
+    (redraw state)
     ;; always clear the current sequence
     ;;  when we evaluate a command
     (assoc updated-machine
@@ -674,6 +673,38 @@
              (fs/bays-empty? (:strips @state)))
       (notify-mode :normal "No flight strips")
       (to-mode new-mode))))
+
+;;
+;; Voice transmission
+;;
+
+(defn transmit-voice
+  [machine state]
+  (let [voice (:voice @state)]
+    (def bla? (v/connected? voice))
+    (cond
+      (not (v/connected? voice))
+      (doecho "No primary voice channel connected")
+      (v/transmitting? voice) 
+      machine ;; already transmitting; do nothing
+      :else (do
+              (v/start-transmitting voice)
+              (redraw state)
+              machine))))
+
+(defn stop-transmit-voice
+  [machine state]
+  (let [voice (:voice @state)]
+    (def stop? true)
+    (cond
+      (not (v/connected? voice))
+      (doecho "No primary voice channel connected")
+      (not (v/transmitting? voice))
+      machine ;; not transmitting; do nothing
+      :else (do
+              (v/stop-transmitting voice)
+              (redraw state)
+              machine))))
 
 ;;
 ;; Weather commands

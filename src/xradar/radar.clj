@@ -1,7 +1,8 @@
 (ns ^{:author "Daniel Leong"
       :doc "Radar UI module"}
   xradar.radar
-  (:require [clojure.string :refer [join]]
+  (:require [clojure.core.incubator :refer [dissoc-in]]
+            [clojure.string :refer [join]]
             [quil
              [core :as q] 
              [middleware :as qm]]
@@ -14,7 +15,7 @@
              [flight-strips :refer [create-strip-bay render-strip-bay]]
              [lists :refer [create-lists render-lists]]
              [mode :as m :refer [RadarMode]]
-             [network :refer [XRadarNetwork]]
+             [network :refer [XRadarNetwork configure-xvoice!]]
              [notif :refer [ack-attention! draw-notifs]]
              [output :refer [create-output-buffers draw-output
                              invalidate-output!]]
@@ -26,7 +27,9 @@
              [sector-scene :refer [load-sector parse-coord]]
              [selection-mode :refer [render-selections]]
              [util :refer [deep-merge with-alpha]]
-             [weather :refer [draw-weather]]]
+             [voice :refer [XVoice transmitting?]]
+             [voice-artist :refer [draw-voice]]
+             [weather :refer [draw-weather metar-for]]]
             [xradar.modes.ground-mode :refer [create-mode]]))
 
 ;;
@@ -182,6 +185,7 @@
     ;; top bar stuff
     (q/with-translation [0 0] ;; can be translated as necessary
       (draw-notifs radar)
+      (draw-voice radar)
       (draw-weather radar))
     ;; lists
     (q/with-translation [0 40]
@@ -221,14 +225,16 @@
 
 (defn on-key-press [state event]
   (q/redraw)
-  (process-input-press (:input state) (fix-esc event) (:radar-state state))
+  (process-input-press (:input state) (:radar-state state) (fix-esc event))
   (when (= 27 (q/key-code)) ; 27 is escape key.
     ; Preventing esc from closing the sketch by setting current key to 0.
     (set! (.key (quil.applet/current-applet)) (char 0)))
   state)
 
 (defn on-key-release [state]
-  (process-input-release (:input state) (fix-esc {:key (q/key-as-keyword) :key-code (q/key-code)}))
+  (process-input-release (:input state) 
+                         (:radar-state state)
+                         (fix-esc {:key (q/key-as-keyword) :key-code (q/key-code)}))
   state)
 
 
@@ -236,9 +242,10 @@
 ;; Public interface
 ;;
 
-(defn create-radar [raw-profile scene network]
+(defn create-radar [raw-profile scene network voice]
   {:pre [(satisfies? XRadarNetwork network)
-         (satisfies? XScene scene)]}
+         (satisfies? XScene scene)
+         (satisfies? XVoice voice)]}
   (let [profile (fill-profile raw-profile)
         state (atom (reduce
                       deep-merge
@@ -251,6 +258,7 @@
                         :scene scene
                         :strips (create-strip-bay)
                         :variables alias-variables
+                        :voice voice
                         :aircraft {}}
                        (create-lists)
                        (create-output-buffers)]))]
@@ -316,6 +324,50 @@
 
 (defn- testing []
   (def radar-connection (atom nil))
+  (def voice-connection (atom {}))
+  (def my-voice 
+    (reify XVoice
+      (connect!
+        [this config]
+        (swap! voice-connection assoc-in [:config (:name config)] config))
+      (config!
+        [this connection-name config]
+        (swap! voice-connection deep-merge {:config {connection-name config}}))
+      (config
+        [this connection-name]
+        (get-in @voice-connection [:config connection-name]))
+      (connections
+        [this]
+        (keys (:config @voice-connection)))
+      (connected?
+        [this]
+        "Check if this is connected with a primary
+        frequency (needed to transmit)"
+        (let [conns (vals (:config @voice-connection))]
+          (some true? (map :prim conns))))
+      (connected?
+        [this connection-name]
+        "Check if this is connected with the given frequency"
+        (let [conns (get (:config @voice-connection) connection-name)]
+          (some true? (vals (select-keys conns [:prim :rx-v :tx-v])))))
+      (disconnect!
+        [this connection-name]
+        (swap! voice-connection dissoc-in [:config connection-name]))
+      (receiving?
+        [this connection-name]
+        false)
+      (start-transmitting
+        [this]
+        (swap! voice-connection assoc :transmitting? true))
+      (stop-transmitting
+        [this]
+        (swap! voice-connection assoc :transmitting? false))
+      (transmitting?
+        [this]
+        (:transmitting? @voice-connection))
+      (transmitting?
+        [this connection-name]
+        (:transmitting? @voice-connection))))
   (def radar 
     (create-radar 
       (assoc (read-profile) :debug true)
@@ -324,6 +376,12 @@
         #(add-aircraft radar))
       (reify XRadarNetwork
         (config-voice! [this config]
+          (def last-config config)
+          (try 
+            (configure-xvoice! my-voice config)
+            (def bla config)
+            (catch Exception e
+              (def last-exc e)))
           (future (swap! (:input @radar) #(assoc % :last-echo (str "! " config)))))
         (connected? [this]
           (not (nil? @radar-connection)))
@@ -350,5 +408,6 @@
           ;; use future to avoid deadlock
           (future (swap! (:input @radar) #(assoc % :last-echo (str ">>" cid ": " message)))))
         (update-flightplan [this aircraft]
-          (def last-action {:update-fp aircraft})))))
+          (def last-action {:update-fp aircraft})))
+      my-voice))
   "Opened!")

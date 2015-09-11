@@ -1,6 +1,29 @@
 (ns ^{:author "Daniel Leong"
       :doc "Protocol for network actions"}
-  xradar.network)
+  xradar.network
+  (:require [xradar.voice :as v]))
+
+(defn configure-xvoice!
+  "Utility to call the appropriate methods
+  on an XVoice instance, given the config
+  object from (config-voice!)"
+  [voice config]
+  (let [connection-name (:name config)
+        relevant-parts (select-keys config [:prim :rx-v :tx-v])
+        want-connected? (->> relevant-parts
+                             vals
+                             (some true?))
+        is-connected? (v/connected? voice connection-name)]
+    (cond
+      ;; already where we want to be
+      (= want-connected? is-connected?)
+      (v/config! voice connection-name relevant-parts)
+      ;; not connected, but want to be
+      (and want-connected? (not is-connected?))
+      (v/connect! voice config)
+      ;; connected and don't want to be
+      (and (not want-connected?) is-connected?)
+      (v/disconnect! voice connection-name))))
 
 (defprotocol XRadarNetwork
   "Protocol for network actions"
@@ -8,7 +31,7 @@
     [this config]
     "Configure a voice connection. Expects a map:
     {:freq '121.800' :server 'voice.nyartcc.org'
-    :channel 'zny_1c' :prim true 
+    :channel 'zny_1c' :prim true :name 'LGA_GND'
     :rx-t true :tx-t true :rx-v true :tx-v true}
     The rx/tx values are receiving and transmitting,
     respectively; the -t and -v refer to text and

@@ -2,6 +2,8 @@
 ;; Normal mode
 ;;
 
+#map/normal/<space> transmit-voice
+
 #map/normal/<colon> start-command
 #map/normal/i start-insert
 #map/normal/<slash> start-search-aircraft
@@ -50,6 +52,9 @@
 ;;
 ;; Flight Strip mode ("strips")
 ;;
+
+; we should also be able to transmit in strips mode
+#map/strips/<space> transmit-voice
 
 #map/strips/h (move-strip-cursor :left)
 #map/strips/j (move-strip-cursor :down)
