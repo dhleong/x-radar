@@ -20,6 +20,12 @@
 #map/normal/- (zoom-view :out)
 #map/normal/m center-view
 
+; info box adjustment
+#map/normal/H (info-box-length -4)
+#map/normal/J (info-box-rotate 45)
+#map/normal/K (info-box-rotate -45)
+#map/normal/L (info-box-length 4)
+
 ; output scrolling
 #map/normal/<ctrl-b> (output-scroll 1)
 #map/normal/<ctrl-f> (output-scroll -1)

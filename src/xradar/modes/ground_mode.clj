@@ -43,15 +43,30 @@
 
 (defmulti draw-info-box (fn [scheme craft] (:state craft :untracked)))
 (defmethod draw-info-box :default [scheme craft]
-  (q/with-translation [(* 3 craft-radius-plus) 0]
-    (q/stroke-weight 1)
-    (q/line 0 0 line-width 0)
-    (q/translate (+ line-width line-margin) 0)
-    (q/text-size 12)
-    (q/text-align :left :bottom)
-    (q/text (create-line1 craft) 0 0)
-    (q/text-align :left :top)
-    (q/text (create-line2 craft) 0 0)))
+  ;; TODO box orientation and line rendering are probably
+  ;;  a strong candidate for abstraction into mode-util
+  (let [rot (or (:info-rotate craft) 0)
+        rads (Math/toRadians rot)
+        line-len (+ line-width (or (:info-length craft) 0))
+        orientation (cond 
+                      (<= 65 rot 115) :center
+                      (<= 135 rot 225) :right
+                      (<= 246 rot 295) :center
+                      :else :left)
+        offset (if (= :center orientation)
+                 (* 2 craft-radius-plus)
+                 0)]
+    (q/with-rotation [rads]
+      (q/with-translation [(* 3 craft-radius-plus) 0]
+        (q/stroke-weight 1)
+        (q/line 0 0 line-len 0)
+        (q/translate (+ line-len line-margin offset) 0)
+        (q/with-rotation [(- rads)]
+          (q/text-size 12)
+          (q/text-align orientation :bottom)
+          (q/text (create-line1 craft) 0 0)
+          (q/text-align orientation :top)
+          (q/text (create-line2 craft) 0 0))))))
 
 (defmulti my-aircraft (fn [scheme craft] (:state craft :untracked)))
 (defmethod my-aircraft :tracked [scheme craft]
