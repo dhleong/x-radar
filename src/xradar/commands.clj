@@ -241,6 +241,7 @@
 ;;
 ;; Selection mode
 ;;
+
 (defn start-select
   [machine state & args]
   (apply sm/start machine state args))

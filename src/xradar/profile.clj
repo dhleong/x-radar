@@ -6,22 +6,13 @@
             [xradar
              [alias :refer [parse-alias]]
              [bindings :refer [read-bindings]]
-             [util :refer [deep-merge]]]))
+             [util :refer [deep-merge resolve-file]]]))
 
 (def settings-keys [:connections :voice])
 
 (def windows? (-> (System/getProperty "os.name")
                   (.toLowerCase)
                   (.contains "windows")))
-
-(defn- resolve-file
-  [path]
-  (let [home (System/getProperty "user.home")]
-    (-> path
-        (.replace "~" home)
-        (.replace "$HOME" home)
-        (.replace "%USERPROFILE%" home)
-        file)))
 
 (def default-settings-file
   (resolve-file

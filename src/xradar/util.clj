@@ -1,11 +1,12 @@
 (ns ^{:author "Daniel Leong"
       :doc "Utilities"}
   xradar.util
-  (:require [quil.core :as q]
+  (:require [clojure.core.matrix :refer [matrix inner-product set-current-implementation]]
+            [clojure.java.io :refer [file]]
+            [quil.core :as q]
             [seesaw
              [bind :as b]
              [core :as s]]
-            [clojure.core.matrix :refer [matrix inner-product set-current-implementation]]
             [xradar
              [network :refer [get-controllers]]
              [scene :refer [get-center get-lon-scale loaded?]]]))
@@ -146,6 +147,16 @@
             [:aircraft cid]
             ;; try controller
             (cid-to-controller radar cid))))
+
+(defn resolve-file
+  [path]
+  (when path
+    (let [home (System/getProperty "user.home")]
+      (-> path
+          (.replace "~" home)
+          (.replace "$HOME" home)
+          (.replace "%USERPROFILE%" home)
+          file))))
 
 ;;
 ;; Wacky hacks

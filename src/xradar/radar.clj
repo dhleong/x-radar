@@ -284,6 +284,10 @@
                 (redraw state)))
     state))
 
+;;
+;; Testing functions
+;;
+
 (defn- aircraft [cid lat lon]
   {:cid cid :callsign (str "ACA26" cid)
    :x (parse-coord lon)

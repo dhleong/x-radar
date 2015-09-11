@@ -1,16 +1,93 @@
 (ns xradar.core
-  (:require [seesaw.core :refer [native!]]
+  (:require [clojure.string :refer [upper-case]]
+            [seesaw.core :refer [native!]]
             [xradar
+             [profile :refer [read-profile]]
              [radar :refer [create-radar]]
-             [radar-util :refer [update-aircraft]]])
+             [radar-util :refer [update-aircraft]]
+             [sector-scene :as sct]
+             [util :refer [resolve-file]]])
   (:gen-class))
 
+;;
+;; Global state
+;;
+
+(defonce primary-radar (atom nil))
+
+;;
+;; Utils
+;;
+
+(defn file-extension
+  [file-obj]
+  (let [file-name (.getName file-obj)
+        ext-start (.lastIndexOf file-name ".")]
+    (when (not= -1 ext-start)
+      (subs file-name (inc ext-start)))))
+
+(defn network-name
+  [profile]
+  (upper-case (get profile :network "VATSIM")))
+
+(defmacro printerr
+  [& body]
+  `(binding [*out* *err*]
+     (println "ERR:" ~@body)))
+
+;;
+;; Component inflation
+;;
+
+(defn inflate-profile 
+  [args]
+  (if-let [pro-file (first args)]
+    (do
+      (println "Reading profile " pro-file)
+      (read-profile pro-file))
+    (do
+      (println "Reading default profile...")
+      (read-profile))))
+
+(defn inflate-network
+  [profile]
+  (let [network (network-name profile)]
+    (case network
+      (printerr "Unsupported network `" network "`"))))
+
+(defn inflate-scene
+  [profile]
+  (if-let [scene-file (resolve-file (:scene-file profile))]
+    (case (file-extension scene-file)
+      "sct" (sct/load-sector scene-file)
+      "sct2" (sct/load-sector scene-file)
+      (printerr "Unsupported scene file " scene-file))
+    (printerr "No scene file specified;"
+              "add #set/scene-file \"PATH\" to your profile")))
+
+(defn inflate-voice
+  [profile]
+  (let [network (network-name profile)]
+    (case network
+      (printerr "Unsupported voice network `" network "`"))))
+
+;;
+;; Main
+;;
+
 (defn -main
-  "I don't do a whole lot ... yet."
+  "Main entry point to xRadar"
   [& args]
   (native!)
-  ;; TODO load profile
-  ;; commented out for now for testing
-  ;; (def radar (create-radar {}))
-  ;; (update-aircraft radar {:cid 2 :x 40 :y 40})
-  )
+  (let [profile (inflate-profile args)
+        network (inflate-network profile)
+        scene (inflate-scene profile)
+        voice (inflate-voice profile)]
+    (if (not-any? nil? [profile network scene voice])
+      (do
+        (swap! primary-radar 
+              (fn [_]
+                (create-radar profile scene network voice))))
+      (do
+        (println "Error instantiating components; startup aborted")
+        (System/exit 1)))))
