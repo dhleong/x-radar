@@ -10,6 +10,7 @@
             [xradar
              [network :refer [config-voice! connected?]]
              [profile :refer [update-profile]]
+             [radar-util :refer [redraw]]
              [util :refer [list-replace when-none-empty-set-enabled]]]))
 
 (defn as-box
@@ -72,6 +73,7 @@
           selection (nth old-connections selected-index)
           new-connections (vec (remove (partial = selection) old-connections))]
       (update-profile state :voice new-connections)
+      (redraw state)
       (try
         (remove-at! table selected-index)
         (catch NullPointerException e
@@ -89,7 +91,7 @@
       (s/selection! table nil))))
 
 (defn create-listener
-  [network model]
+  [state network model]
   (reify javax.swing.event.TableModelListener
     (tableChanged [this event]
       (let [e-type (.getType event)
@@ -117,7 +119,9 @@
                 (.setValueAt model false row (.getColumn event))))
             ;; connected? do it!
             (connected? network)
-            (config-voice! network row-value)))))))
+            (do
+              (config-voice! network row-value)
+              (redraw state))))))))
 
 (defn open-voice-comms
   "Open the voice communications management window"
@@ -144,7 +148,7 @@
                   :column-widths table-column-widths
                   :model (doto model
                           (.addTableModelListener 
-                            (create-listener network model))))) 
+                            (create-listener state network model))))) 
               "grow,span 8 2,w 700::"]
              ;; inputs
              ["Name:" "Right"]

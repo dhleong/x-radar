@@ -23,6 +23,9 @@
                               (dec (:transmitting? %)))))
   (transmitting?
     [this]
+    (> (:transmitting? @state-atom) 0))
+  (transmitting?
+    [this connection-name]
     (> (:transmitting? @state-atom) 0)))
 (defn new-voice []
   (->DummyVoice (atom {:transmitting? 0})))

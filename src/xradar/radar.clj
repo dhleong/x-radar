@@ -28,6 +28,7 @@
              [selection-mode :refer [render-selections]]
              [util :refer [deep-merge with-alpha]]
              [voice :refer [XVoice transmitting?]]
+             [voice-artist :refer [draw-voice]]
              [weather :refer [draw-weather metar-for]]]
             [xradar.modes.ground-mode :refer [create-mode]]))
 
@@ -165,11 +166,6 @@
       :select (render-selections radar)
       ;; default; do nothing
       nil)
-    (when (transmitting? (:voice radar))
-      (q/text-size echo-text-size)
-      (q/text-align :left)
-      (q/fill-int (-> scheme :echo))
-      (q/text "TX" 30 150))
     (when-let [echo (:last-echo input)]
       (q/text-size echo-text-size)
       (q/text-align :left)
@@ -189,6 +185,7 @@
     ;; top bar stuff
     (q/with-translation [0 0] ;; can be translated as necessary
       (draw-notifs radar)
+      (draw-voice radar)
       (draw-weather radar))
     ;; lists
     (q/with-translation [0 40]
@@ -335,7 +332,13 @@
         (swap! voice-connection assoc-in [:config (:name config)] config))
       (config!
         [this connection-name config]
-        (swap! voice-connection assoc-in [:config connection-name] config))
+        (swap! voice-connection deep-merge {:config {connection-name config}}))
+      (config
+        [this connection-name]
+        (get-in @voice-connection [:config connection-name]))
+      (connections
+        [this]
+        (keys (:config @voice-connection)))
       (connected?
         [this]
         "Check if this is connected with a primary
@@ -350,6 +353,9 @@
       (disconnect!
         [this connection-name]
         (swap! voice-connection dissoc-in [:config connection-name]))
+      (receiving?
+        [this connection-name]
+        false)
       (start-transmitting
         [this]
         (swap! voice-connection assoc :transmitting? true))
@@ -358,6 +364,9 @@
         (swap! voice-connection assoc :transmitting? false))
       (transmitting?
         [this]
+        (:transmitting? @voice-connection))
+      (transmitting?
+        [this connection-name]
         (:transmitting? @voice-connection))))
   (def radar 
     (create-radar 

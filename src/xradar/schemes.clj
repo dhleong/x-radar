@@ -36,4 +36,7 @@
     :over 0xccE5B39C
     :noplan 0xccCCCCCC
     :unknown 0xccCCCCCC
-    :vfr 0xccCADFD5}})
+    :vfr 0xccCADFD5}
+   :voice
+   {:transmit 0xffE78822
+    :receive 0xff6FB424}})
