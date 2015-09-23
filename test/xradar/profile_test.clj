@@ -70,8 +70,8 @@
         (is (= 1 (count conns)))
         (is (= "ZNY_ZK_OBS" (:callsign (first conns))))
         (is (= (join
-                 ["#set/voice [{:freq \"121.700\", :name \"LGA_GND\"}]\n"
-                  "#set/connections [{:callsign \"ZNY_ZK_OBS\"}]\n"])
+                 ["#set/connections [{:callsign \"ZNY_ZK_OBS\"}]\n"
+                  "#set/voice [{:name \"LGA_GND\", :freq \"121.700\"}]\n"])
                written)))))) 
 
 (deftest update-profile-test

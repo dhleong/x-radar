@@ -3,7 +3,7 @@
   :url "http://github.com/dhleong/xradar"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.6.0"]
+  :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/core.incubator "0.1.3"]
                  [asfiled "0.1.0-SNAPSHOT"]
                  [clj-time "0.10.0"]
@@ -14,4 +14,4 @@
   :target-path "target/%s"
   :jvm-opts ["-Xdock:name=xRadar"] 
   :profiles {:uberjar {:aot :all}}
-  :resource-paths ["lib/*"])
+  :resource-paths ["lib/*" "resources"])
