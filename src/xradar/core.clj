@@ -6,7 +6,9 @@
              [radar :refer [create-radar]]
              [radar-util :refer [update-aircraft]]
              [sector-scene :as sct]
-             [util :refer [resolve-file]]])
+             [util :refer [resolve-file]]]
+            [xradar.networks
+             [vatsim :as vatsim]])
   (:gen-class))
 
 ;;
@@ -53,6 +55,7 @@
   [profile]
   (let [network (network-name profile)]
     (case network
+      "VATSIM" (vatsim/create-network)
       (printerr "Unsupported network `" network "`"))))
 
 (defn inflate-scene
