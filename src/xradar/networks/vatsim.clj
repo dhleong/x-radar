@@ -1,8 +1,13 @@
-(ns xradar.core
-  (:require [aileron.core :as a]
-            [xradar
+(ns ^{:author "Daniel Leong"
+      :doc "Vatsim network implementation"}
+  xradar.networks.vatsim
+  (:require [xradar
              [network :refer [XRadarNetwork]]
-             [util :refer [deep-merge]]]))
+             [util :refer [deep-merge]]]
+            [xradar.stubs.util :refer [require-stub]]))
+
+(require-stub aileron.core :as a :else aileron)
+
 
 ;; FIXME whatever this is. Should probably be
 ;;  taken from whatever gets returned by get-servers
