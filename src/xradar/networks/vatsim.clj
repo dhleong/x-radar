@@ -2,6 +2,7 @@
       :doc "Vatsim network implementation"}
   xradar.networks.vatsim
   (:require [xradar
+             [alias :refer [expand-static]]
              [network :refer [XRadarNetwork]]
              [util :refer [deep-merge]]]
             [xradar.stubs.util :refer [require-stub]]))
@@ -47,13 +48,22 @@
   )
 
 (defn create-network
-  []
+  "Expects an atom that resolves to the state atom"
+  [radar-atom]
   (let [controllers (atom {})
         conn 
         (a/create-connection
           "xRadar v0.1.0"
           0 1
           "xRadar connection")] 
+    (a/update!
+      conn
+      :atis-factory
+      #(let [state @radar-atom
+             raw-atis (-> @state :profile :atis)]
+         (map
+           (partial expand-static state)
+           raw-atis)))
     ;; TODO remove controllers on leave
     (a/listen conn
               :controllers 

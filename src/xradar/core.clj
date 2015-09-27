@@ -52,10 +52,10 @@
       (read-profile))))
 
 (defn inflate-network
-  [profile]
+  [radar-atom profile]
   (let [network (network-name profile)]
     (case network
-      "VATSIM" (vatsim/create-network)
+      "VATSIM" (vatsim/create-network radar-atom)
       (printerr "Unsupported network `" network "`"))))
 
 (defn inflate-scene
@@ -83,7 +83,7 @@
   [& args]
   (native!)
   (let [profile (inflate-profile args)
-        network (inflate-network profile)
+        network (inflate-network primary-radar profile)
         scene (inflate-scene profile)
         voice (inflate-voice profile)]
     (if (not-any? nil? [profile network scene voice])
