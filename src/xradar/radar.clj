@@ -375,7 +375,7 @@
         (:transmitting? @voice-connection))))
   (def radar 
     (create-radar 
-      (assoc (read-profile) :debug true)
+      (read-profile)
       (load-sector 
         "/Users/dhleong/VRC/Support/ZNY.sct2"
         #(add-aircraft radar))

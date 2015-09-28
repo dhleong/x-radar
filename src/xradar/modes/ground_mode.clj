@@ -19,10 +19,10 @@
   (let [sign (:callsign craft)
         remarks (lower-case (:remarks craft))]
     (cond
-      (.contains remarks "/v") (str sign "/v")
+      (.contains remarks "/v") sign
       (.contains remarks "/r") (str sign "/r")
       (.contains remarks "/t") (str sign "/t")
-      :else sign)))
+      :else (str sign "/?"))))
 
 (defn create-line2
   [craft]
