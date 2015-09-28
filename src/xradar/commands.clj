@@ -19,13 +19,14 @@
              [lists :refer [toggle-list]]
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
-                              get-controllers push-strip!]]
+                              get-controllers push-strip!
+                              update-flightplan]]
              [notif :refer [ack-attention!]]
              [output :refer [append-output 
                              get-active get-active-buffer 
                              scroll-output! set-active!]]
              [profile :refer [commit-profile]]
-             [radar-util :refer [get-location redraw]]
+             [radar-util :refer [get-location redraw update-aircraft]]
              [scene :refer [find-point]]
              [selection :refer [to-bindings from-bindings]]
              [selection-mode :as sm]
@@ -130,6 +131,17 @@
     (assoc updated-machine
            :current-sequence [])))
 
+(defn- resolve-keyword
+  [raw-keyword]
+  (cond
+    (keyword? raw-keyword)
+    raw-keyword
+    (symbol? raw-keyword)
+    (keyword raw-keyword)
+    (= \: (first raw-keyword))
+    (keyword (subs raw-keyword 1))
+    :else (keyword raw-keyword)))
+
 ;;
 ;; Insert mode handling
 ;;
@@ -138,6 +150,8 @@
   "Start insert mode to get some text input from the user.
   Optionally you can provide a textual `prompt`, and a 
   handler to be fired `on-submit`. 
+  `initial` is the initial content of the box
+  `initial-selected` If true, select the initial contents of the box
   `on-submit` should be a (fn [machine state value]) 
   where `machine` and `state` are the usual command args,
   and `value` is the string value provided by the user.
@@ -150,8 +164,11 @@
   `cancel-mode` should be the keyword for a mode to return
   to on cancel. If not provided, defaults to `:normal`"
   [machine state & {:keys [history prompt 
+                           initial initial-selected
                            on-submit on-change
-                           cancel-mode]}]
+                           cancel-mode]
+                    :or {initial ""
+                         initial-selected false}}]
   (let [{:keys [x y]} (get-location state)
         selected-id (:selected @state)
         selected (get (:aircraft @state) selected-id nil)
@@ -180,6 +197,8 @@
              (q/width)
              :prompt my-prompt
              :history (or history @(:history-insert @state))
+             :initial initial
+             :initial-selected initial-selected
              :on-cancel #(with-machine (to-mode (or cancel-mode :normal)))
              :on-change #(try
                            (change-handler state %)
@@ -301,6 +320,43 @@
   (scroll-output! state amount)
   ;; no change in machine besides resetting sequence
   (to-mode :normal))
+
+;;
+;; Aircraft config/editing
+;;
+
+(defn config
+  ([machine state]
+   (notify-mode :normal "Incomplete"))
+  ([machine state raw-field]
+   (let [cid (:selected @state)
+         craft (get-in @state [:aircraft cid])
+         callsign (:callsign craft)
+         field (resolve-keyword raw-field)]
+     (if callsign
+       (start-insert machine state
+                     :prompt (str "Update " callsign " " field)
+                     :history []
+                     :initial (str (get craft field ""))
+                     :initial-selected true
+                     :on-submit #(config %1 %2 raw-field %3))
+       (notify-mode :normal "You must select an aircraft first"))))
+  ([machine state raw-field value]
+   (let [cid (:selected @state)
+         craft (get-in @state [:aircraft cid])
+         callsign (:callsign craft)
+         field (resolve-keyword raw-field)
+         network (:network @state)]
+     (if cid
+       (let [updated-values {:callsign callsign
+                             :cid cid
+                             field (str value)}]
+         (swap! state 
+                deep-merge 
+                {:aircraft {cid updated-values}})
+         (update-flightplan network updated-values)
+         (notify-mode :normal "Updated " raw-field))
+       (notify-mode :normal "You must select an aircraft first")))))
 
 ;;
 ;; Aircraft selection

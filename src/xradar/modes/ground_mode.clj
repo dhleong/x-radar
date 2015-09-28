@@ -56,6 +56,8 @@
         offset (if (= :center orientation)
                  (* 2 craft-radius-plus)
                  0)]
+    (when (= "ACA264" (:callsign craft))
+      (def hi craft))
     (q/with-rotation [rads]
       (q/with-translation [(* 3 craft-radius-plus) 0]
         (q/stroke-weight 1)

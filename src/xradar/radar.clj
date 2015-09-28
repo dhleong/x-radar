@@ -200,7 +200,7 @@
     ;; ensure the state is returned
     state))
 
-(defn update [state]
+(defn update! [state]
   (let [radar @(:radar-state state)
         {:keys [scene camera zoom]} radar
         this-camera (or camera (get-center scene))
@@ -267,7 +267,7 @@
       :setup setup
       :setup-params [state]
       :draw draw
-      :update update
+      :update update!
       :renderer renderer
       :size (:size profile)
       :features [:resizable]

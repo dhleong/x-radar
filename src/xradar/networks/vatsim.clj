@@ -43,8 +43,9 @@
   (send-to!
     [this cid message]
     (a/send! conn cid message))
-  ;; TODO update-flightplan
-  )
+  (update-flightplan
+    [this aircraft]
+    (a/config-pilot! conn aircraft)))
 
 (defn create-network
   []

@@ -122,14 +122,18 @@
   "Create the insert mode box,
   with the given callbacks"
   [state x y w & {:keys [prompt history 
-                         on-submit on-cancel on-change]}]
+                         initial initial-selected
+                         on-submit on-cancel on-change]
+                  :or {initial ""
+                       initial-selected false}}]
   {:pre [(function? on-submit) (function? on-cancel)]}
   (let [input 
         (doto
-          (s/text 
+          (s/text
             :id :input
             :user-data {:scrollback (atom -1)
                         :history history}
+            :text initial
             :listen 
             [:key-pressed #(try
                              (key-handler on-submit on-cancel on-change %)
@@ -165,6 +169,8 @@
             (s/move! :to [x y])
             s/pack!
             s/show!)]
-    (s/request-focus! (s/select window [:#input]))
+    (s/request-focus! input)
+    (when initial-selected
+      (s/selection! input [0 (count initial)]))
     ;; return the frame
     window))

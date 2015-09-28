@@ -3,8 +3,9 @@
   xradar.stubs.aileron
   (:require [xradar.stubs.util :refer [defstub]]))
 
-(defstub create-connection)
+(defstub config-pilot!)
 (defstub connect!)
+(defstub create-connection)
 (defstub disconnect!)
 (defstub listen)
 (defstub send!)

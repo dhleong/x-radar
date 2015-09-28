@@ -55,6 +55,12 @@
 #map/normal/r reply-private-chat
 #map/normal/R prompt-reply-private-chat
 
+;; Pilot config/editing
+#map/normal/es (config :scratch)
+#map/normal/ek (config :squawk)
+#map/normal/em (config :remarks)
+#map/normal/er (config :route)
+
 ;;
 ;; Flight Strip mode ("strips")
 ;;
