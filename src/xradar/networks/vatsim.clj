@@ -38,6 +38,9 @@
      {:ip "127.0.0.1"
       :location "New York, USA"}})
   ;; TODO my-callsign, push-strip!
+  (request-atis
+    [this callsign]
+    (a/request-atis conn callsign))
   (send!
     [this message]
     (a/transmit! conn message))

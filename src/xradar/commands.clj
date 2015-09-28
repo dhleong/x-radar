@@ -19,7 +19,8 @@
              [lists :refer [toggle-list]]
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
-                              get-controllers push-strip!]]
+                              get-controllers push-strip!
+                              request-atis]]
              [notif :refer [ack-attention!]]
              [output :refer [append-output 
                              get-active get-active-buffer 
@@ -118,12 +119,17 @@
           ;; form? insert machine/state and execute
           (and (not raw-symbol?) (seq raw))
           (if-let [list-cmd (ns-resolve 'xradar.commands (first raw))]
-            (apply list-cmd machine state (rest raw))
-            (notify-mode :normal
-                         (str "No such command:" (first raw))))
+            (try
+              (apply list-cmd machine state (rest raw))
+              (catch Exception e
+                (.printStackTrace e)
+                (append-output state 
+                               (str "ERR: " list-cmd " failed: " (.getMessage e))
+                               :color :error)
+                (notify-mode :normal "Unable to execute " list-cmd)))
+            (notify-mode :normal "No such command:" (first raw)))
           ;; no such thing :(
-          :else (notify-mode :normal
-                             (str "No such command:" raw)))]
+          :else (notify-mode :normal "No such command:" raw))]
     (redraw state)
     ;; always clear the current sequence
     ;;  when we evaluate a command
@@ -331,6 +337,34 @@
     (swap! state #(assoc % 
                         :selected cid 
                         :craft-bindings {})))
+  (to-mode :normal))
+
+;;
+;; ATIS-related
+;;
+
+(defn atis
+  "Request a Controller's ATIS"
+  ([machine state]
+   (let [network (:network @state)
+         targets (get-controllers network)]
+    (if-not (empty? targets)
+      (start-select machine state
+                    :items targets
+                    :prompt "Request ATIS from:"
+                    :to-string #(:callsign %)
+                    :on-cancel 'cancel-atis-request
+                    :on-select 'atis)
+      (doecho "No other controllers to query"))))
+  ([machine state callsign-or-obj]
+   (let [callsign (if (string? callsign-or-obj)
+                    callsign-or-obj
+                    (:callsign callsign-or-obj))]
+     (request-atis (:network @state) callsign)
+     (notify-mode :normal "Requested ATIS from " callsign))))
+
+(defn cancel-atis-request
+  [machine state]
   (to-mode :normal))
 
 ;;
