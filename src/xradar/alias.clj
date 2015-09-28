@@ -229,3 +229,10 @@
                 end (+ start (count (:part part)) end-offset)]
             (.replace buf start end expanded)))))
     (str buf)))
+
+(defn expand-static
+  "Convenience for expand-values when there
+  is no contextual info (that is, you can expect
+  to never have user input)"
+  [state text]
+  (expand-values state {:cursor -1} text))

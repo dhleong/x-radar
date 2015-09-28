@@ -8,6 +8,7 @@
 (defstub create-connection)
 (defstub disconnect!)
 (defstub listen)
+(defstub request-atis)
 (defstub send!)
 (defstub transmit!)
 (defstub update!)

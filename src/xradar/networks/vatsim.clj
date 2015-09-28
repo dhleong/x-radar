@@ -2,6 +2,7 @@
       :doc "Vatsim network implementation"}
   xradar.networks.vatsim
   (:require [xradar
+             [alias :refer [expand-static]]
              [network :refer [XRadarNetwork]]
              [util :refer [deep-merge]]]
             [xradar.stubs.util :refer [require-stub]]))
@@ -37,6 +38,9 @@
      {:ip "127.0.0.1"
       :location "New York, USA"}})
   ;; TODO my-callsign, push-strip!
+  (request-atis
+    [this callsign]
+    (a/request-atis conn callsign))
   (send!
     [this message]
     (a/transmit! conn message))
@@ -48,13 +52,22 @@
     (a/config-pilot! conn aircraft)))
 
 (defn create-network
-  []
+  "Expects an atom that resolves to the state atom"
+  [radar-atom]
   (let [controllers (atom {})
         conn 
         (a/create-connection
           "xRadar v0.1.0"
           0 1
           "xRadar connection")] 
+    (a/update!
+      conn
+      :atis-factory
+      #(let [state @radar-atom
+             raw-atis (-> @state :profile :atis)]
+         (map
+           (partial expand-static state)
+           raw-atis)))
     ;; TODO remove controllers on leave
     (a/listen conn
               :controllers 

@@ -66,6 +66,9 @@
     [this controller-id aircraft]
     "Push a flight strip to the controller with
     the given id")
+  (request-atis
+    [this controller-id]
+    "Request ATIS from the controller with the given id")
   (send!
     [this message]
     "Send a message on the active frequency")

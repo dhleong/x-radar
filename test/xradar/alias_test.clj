@@ -189,4 +189,14 @@
         (is (= ".hiTest" (expand ".hiTest"))))
       (let [info {:cursor 4}]
         ;; inserting before something else
-        (is (= "Hello world,Test" (expand ".hi Test")))))))
+        (is (= "Hello world,Test" (expand ".hi Test"))))))
+  (testing "Static expansion"
+    (let [state (atom {:variables
+                       {:who (constantly "I've")
+                        :what (constantly "Serenity")}
+                       :functions
+                       {:uc #(upper-case %2)}})]
+      (is (= "NOW I've found SERENITY" 
+             (expand-static 
+               state
+               "$uc(now) I've found $uc($what)"))))))

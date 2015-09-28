@@ -17,7 +17,8 @@
              [mode :as m :refer [RadarMode]]
              [network :refer [XRadarNetwork configure-xvoice!]]
              [notif :refer [ack-attention! draw-notifs]]
-             [output :refer [create-output-buffers draw-output
+             [output :refer [append-output
+                             create-output-buffers draw-output
                              invalidate-output!]]
              [profile :refer [read-profile]]
              [radar-util :refer [redraw update-aircraft]]
@@ -405,6 +406,11 @@
         (push-strip! [this cid strip]
           ;; just ignore
           nil)
+        (request-atis [this callsign]
+          (append-output radar 
+                         "ATIS Result for JFK_TWR"
+                         :with 112
+                         :with-label "JFK_TWR"))
         (send! [this message]
           ;; use future to avoid deadlock
           (future (swap! (:input @radar) #(assoc % :last-echo (str ">>" message)))))
