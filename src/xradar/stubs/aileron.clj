@@ -1,7 +1,7 @@
 (ns ^{:author "Daniel Leong"
       :doc "Aileron stub, for when you don't have the real thing"}
   xradar.stubs.aileron
-  (:require [xradar.stubs.util :refer [defstub]]))
+  (:require [stubby.core :refer [defstub]]))
 
 (defstub config-pilot!)
 (defstub connect!)

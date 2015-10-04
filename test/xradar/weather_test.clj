@@ -3,7 +3,7 @@
             [xradar.weather :refer :all]))
 
 (def lga-metar
-  "KLGA 311251Z 29005KT 10SM BKN090 BKN140 BKN250 26/19 A3003")
+  "KLGA 271251Z 29005KT 10SM BKN090 BKN140 BKN250 26/19 A3003")
 
 (defn receive!
   [metar]

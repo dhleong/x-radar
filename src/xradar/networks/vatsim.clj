@@ -1,13 +1,13 @@
 (ns ^{:author "Daniel Leong"
       :doc "Vatsim network implementation"}
   xradar.networks.vatsim
-  (:require [xradar
+  (:require [stubby.core :refer [require-stub]]
+            [xradar
              [alias :refer [expand-static]]
              [network :refer [XRadarNetwork]]
-             [util :refer [deep-merge]]]
-            [xradar.stubs.util :refer [require-stub]]))
+             [util :refer [deep-merge]]]))
 
-(require-stub aileron.core :as a :else aileron)
+(require-stub aileron.core :as a :else xradar.stubs.aileron)
 
 
 ;; FIXME whatever this is. Should probably be
