@@ -5,8 +5,10 @@
 
 (defstub config-pilot!)
 (defstub connect!)
+(defstub connected?)
 (defstub create-connection)
 (defstub disconnect!)
+(defstub field)
 (defstub listen)
 (defstub request-atis)
 (defstub send!)
