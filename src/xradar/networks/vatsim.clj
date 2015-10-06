@@ -16,7 +16,7 @@
 
 (deftype VatsimNetwork [conn controllers-atom]
   XRadarNetwork
-  ;; TODO config-voice!, connected?
+  ;; TODO config-voice!
   (connect!
     [this params]
     (let [server-name (:server params)
@@ -25,6 +25,9 @@
       (doseq [[k v] params]
         (a/update! conn k v))
       (a/connect! conn host port)))
+  (connected?
+    [this]
+    (a/connected? conn))
   (disconnect!
     [this]
     (a/disconnect! conn))
@@ -37,7 +40,10 @@
     {"USA-E" 
      {:ip "127.0.0.1"
       :location "New York, USA"}})
-  ;; TODO my-callsign, push-strip!
+  (my-callsign
+    [this]
+    (a/field conn :callsign))
+  ;; TODO push-strip!
   (request-atis
     [this callsign]
     (a/request-atis conn callsign))
