@@ -12,6 +12,7 @@
             [quil.core :as q]
             [seesaw.core :as s]
             [xradar
+             [aircraft :refer [describe-craft]]
              [chat :refer [send-chat!]]
              [connection-config :refer [open-connection]]
              [flight-plan :refer [open-flight-plan]]
@@ -393,7 +394,10 @@
     (swap! state #(assoc % 
                         :selected cid 
                         :craft-bindings {})))
-  (to-mode :normal))
+  (let [obj (if (map? cid-or-object)
+              cid-or-object
+              (get-in @state [:aircraft cid-or-object]))]
+    (notify-mode :normal (describe-craft @state obj))))
 
 ;;
 ;; ATIS-related
