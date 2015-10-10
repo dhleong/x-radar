@@ -394,10 +394,11 @@
     (swap! state #(assoc % 
                         :selected cid 
                         :craft-bindings {})))
-  (let [obj (if (map? cid-or-object)
+  (if-let [obj (if (map? cid-or-object)
               cid-or-object
               (get-in @state [:aircraft cid-or-object]))]
-    (notify-mode :normal (describe-craft @state obj))))
+    (notify-mode :normal (describe-craft @state obj))
+    (to-mode :normal)))
 
 ;;
 ;; ATIS-related

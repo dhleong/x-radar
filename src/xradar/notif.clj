@@ -32,7 +32,6 @@
       (.invoke getter nil (into-array [])))
     (catch Exception e
       ;; not OSX, or OSX extensions missing
-      (println e)
       nil)))
 
 ;;
