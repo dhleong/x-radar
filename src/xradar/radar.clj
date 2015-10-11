@@ -28,6 +28,7 @@
                             get-magnetic-var loaded? draw-scene]]
              [sector-scene :refer [load-sector parse-coord]]
              [selection-mode :refer [render-selections]]
+             [timers :refer [draw-timers]]
              [util :refer [deep-merge with-alpha]]
              [voice :refer [XVoice transmitting?]]
              [voice-artist :refer [draw-voice]]
@@ -54,6 +55,9 @@
 (def bar-text-size 14)
 (def bar-padding 10)
 (def echo-text-size 13.5)
+
+;; (def timer-delay 350)
+(def timer-delay 1000)
 
 ;;
 ;; Util
@@ -191,7 +195,8 @@
     (q/with-translation [0 0] ;; can be translated as necessary
       (draw-notifs radar)
       (draw-voice radar)
-      (draw-weather radar))
+      (draw-weather radar)
+      (draw-timers radar))
     ;; lists
     (q/with-translation [0 40]
       (render-lists radar))
@@ -288,6 +293,11 @@
               (fn [_]
                 (invalidate-output! state)
                 (redraw state)))
+    ;; set up a timer that redraws periodically
+    (s/timer (fn [_] 
+               (redraw state))
+      :delay timer-delay
+      :initial-delay 1000)
     state))
 
 ;;

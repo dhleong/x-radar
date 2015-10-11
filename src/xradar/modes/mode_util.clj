@@ -1,8 +1,7 @@
 (ns ^{:author "Daniel Leong"
       :doc "Utility methods for radar mode implementations"}
   xradar.modes.mode-util
-  (:require [clojure.test :refer [function?]]
-            [quil.core :as q]
+  (:require [quil.core :as q]
             [xradar
              [radar-util :refer [update-aircraft]]
              [util :refer [object-for]]]))

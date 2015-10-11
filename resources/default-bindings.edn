@@ -52,6 +52,12 @@
 #map/normal/r reply-private-chat
 #map/normal/R prompt-reply-private-chat
 
+;; timers
+#map/normal/t1 (toggle-timer 1)
+#map/normal/t2 (toggle-timer 2)
+#map/normal/t3 (toggle-timer 3)
+#map/normal/t4 (toggle-timer 4)
+
 ;;
 ;; Commands that require a selected aircraft
 ;;  (a few others do too)

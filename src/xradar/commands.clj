@@ -32,6 +32,7 @@
              [scene :refer [find-point]]
              [selection :refer [to-bindings from-bindings]]
              [selection-mode :as sm]
+             [timers :as timers]
              [util :refer [deep-merge in-bounds resolve-id]]
              [voice :as v]
              [voice-config :refer [open-voice-comms]]
@@ -623,6 +624,15 @@
      (mu/info-line-rotate! state selected adjustment)
      (to-mode :normal))))
 
+;;
+;; Timers
+;;
+
+(defn toggle-timer
+  [machine state duration-minutes]
+  (if (timers/toggle-timer state duration-minutes)
+    (notify-mode :normal duration-minutes "-minute timer set")
+    (notify-mode :normal duration-minutes "-minute timer canceled")))
 
 ;;
 ;; Window toggling
