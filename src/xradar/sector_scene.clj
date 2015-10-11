@@ -389,11 +389,12 @@
       (:magnet-var info)
       0))
   (find-point [this point-name]
-    (when-let [info (-> @data-atom :info)]
-      (->> [:airport :ndb :vor]
-           (mapcat #(get @data-atom % []))
-           (filter #(.equalsIgnoreCase point-name (:name %)))
-           first)))
+    (when (string? point-name)
+      (when-let [info (-> @data-atom :info)]
+        (->> [:airport :ndb :vor]
+             (mapcat #(get @data-atom % []))
+             (filter #(.equalsIgnoreCase point-name (:name %)))
+             first))))
   (loaded? [this]
     (not (empty? @data-atom))))
   

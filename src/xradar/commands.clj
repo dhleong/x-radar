@@ -12,7 +12,7 @@
             [quil.core :as q]
             [seesaw.core :as s]
             [xradar
-             [aircraft :refer [describe-craft]]
+             [aircraft :refer [describe-craft toggle-bd-between]]
              [chat :refer [send-chat!]]
              [connection-config :refer [open-connection]]
              [flight-plan :refer [open-flight-plan]]
@@ -32,7 +32,7 @@
              [scene :refer [find-point]]
              [selection :refer [to-bindings from-bindings]]
              [selection-mode :as sm]
-             [util :refer [deep-merge in-bounds]]
+             [util :refer [deep-merge in-bounds resolve-id]]
              [voice :as v]
              [voice-config :refer [open-voice-comms]]
              [weather :refer [mark-acked! unwatch-weather!
@@ -80,6 +80,35 @@
   [new-mode & values]
   `(assoc (to-mode ~new-mode)
           :last-echo (str ~@values)))
+
+(defmacro with-selected
+  "Binds `selected` to the cid of the selected aircraft and
+  executes the body. If no aircraft is selected, the body
+  is not executed and the user is notified"
+  [& body]
+  (let [error-msg (when (string? (first body))
+                    (first body))
+        the-body (if error-msg
+                   (rest body)
+                   body)]
+    `(if-let [~'selected (:selected (deref ~'state))]
+       (do ~@body)
+       (notify-mode :normal ~(or error-msg
+                                 "You must select an aircraft first")))))
+
+(defmacro with-selected-craft
+  "Binds `craft` to the aircraft object, if possible, of
+  the selected aircraft."
+  [& body]
+  (let [error-msg (when (string? (first body))
+                    (first body))
+        the-body (if error-msg
+                   (rest body)
+                   body)] 
+    `(with-selected ~error-msg
+       (if-let [~'craft (get-in (deref ~'state) [:aircraft ~'selected])]
+         ~@the-body
+         (notify-mode :normal "No such aircraft" ~'selected)))))
 
 (defmacro with-machine
   "When all you have is the radar state and want to
@@ -370,21 +399,23 @@
 ;;
 
 (defn start-select-aircraft
-  [machine state]
-  (let [craft 
-        (->> (:aircraft @state)
-             vals
-             ;; NB: this doesn't work, since the
-             ;;  camera will have been reset
-             ;;  at the point this is called
-             #_(map #(in-bounds (:x %) (:y %)))
-             (map :cid))
-        aircraft-selections (to-bindings craft 'select-aircraft)]
-    (swap! state #(assoc %
-                         :craft-bindings 
-                         (from-bindings aircraft-selections)))
-    (assoc (to-mode :select-aircraft)
-           :current-bindings aircraft-selections)))
+  ([machine state]
+   (start-select-aircraft machine state 'select-aircraft))
+  ([machine state callback-symbol]
+   (let [craft 
+         (->> (:aircraft @state)
+              vals
+              ;; NB: this doesn't work, since the
+              ;;  camera will have been reset
+              ;;  at the point this is called
+              #_(map #(in-bounds (:x %) (:y %)))
+              (map :cid))
+         aircraft-selections (to-bindings craft callback-symbol)]
+     (swap! state #(assoc %
+                          :craft-bindings 
+                          (from-bindings aircraft-selections)))
+     (assoc (to-mode :select-aircraft)
+            :current-bindings aircraft-selections))))
 
 (defn select-aircraft
   [machine state cid-or-object]
@@ -427,6 +458,37 @@
 (defn cancel-atis-request
   [machine state]
   (to-mode :normal))
+
+;;
+;; Bearing/distance commands
+;;
+
+(declare toggle-bearing-distance-to)
+
+(defn toggle-bearing-distance
+  ([machine state]
+   (toggle-bearing-distance machine state :waypoint))
+  ([machine state target-type]
+   (with-selected-craft
+     (case target-type
+       :aircraft (start-select-aircraft
+                   machine state 'toggle-bearing-distance-to)
+       :waypoint (start-insert 
+                   machine state
+                   :prompt (str "From " (:callsign craft) " to:")
+                   :history []
+                   :on-submit toggle-bearing-distance-to)))))
+
+(defn toggle-bearing-distance-to
+  [machine state cid-or-waypoint]
+  (with-selected
+    (if-let [resolved (resolve-id state cid-or-waypoint)]
+      (do
+        (toggle-bd-between state selected resolved)
+        (redraw state)
+        (to-mode :normal))
+      (notify-mode :normal "Unknown: " cid-or-waypoint))))
+
 
 ;;
 ;; Chat commands
@@ -549,21 +611,17 @@
   ([machine state]
    (info-box-length machine state nil))
   ([machine state adjustment]
-   (if-let [cid (:selected @state)]
-    (do
-      (mu/info-line-length! state cid adjustment)
-      (to-mode :normal))
-    (notify-mode :normal "You must select an aircraft to adjust its info box"))))
+   (with-selected
+     (mu/info-line-length! state selected adjustment)
+     (to-mode :normal))))
 
 (defn info-box-rotate
   ([machine state]
    (info-box-rotate machine state nil))
   ([machine state adjustment]
-   (if-let [cid (:selected @state)]
-    (do
-      (mu/info-line-rotate! state cid adjustment)
-      (to-mode :normal))
-    (notify-mode :normal "You must select an aircraft to adjust its info box"))))
+   (with-selected
+     (mu/info-line-rotate! state selected adjustment)
+     (to-mode :normal))))
 
 
 ;;
@@ -585,11 +643,9 @@
 
 (defn toggle-flight-plan
   [machine state]
-  (if-let [cid (:selected @state)]
-    (do
-      (open-flight-plan state cid)
-      (to-mode :normal))
-    (notify-mode :normal "You must select an aircraft to edit its flight plan")))
+  (with-selected "You must select an aircraft to edit its flight plan"
+    (open-flight-plan state selected)
+    (to-mode :normal)))
 
 (defn toggle-voice-config
   [machine state]
@@ -702,11 +758,9 @@
 
 (defn add-strip
   [machine state]
-  (if-let [cid (:selected @state)]
-    (do 
-      (fs/add-strip (:strips @state) cid)
-      (doecho "Added flight strip"))
-    (doecho "You must select an aircraft to add its flight strip")))
+  (with-selected
+    (fs/add-strip (:strips @state) selected)
+    (doecho "Added flight strip")))
 
 (defn add-strip-separator
   ([machine state]

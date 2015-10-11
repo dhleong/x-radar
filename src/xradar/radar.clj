@@ -8,6 +8,7 @@
              [middleware :as qm]]
             [seesaw.core :as s]
             [xradar
+             [aircraft :refer [create-bd draw-bd]]
              [alias-vars :refer [alias-functions alias-variables]]
              [input :refer [create-input describe-input 
                             process-input-press process-input-release
@@ -148,6 +149,8 @@
                 (assoc craft :selected true)
                 craft)]
           (m/draw-aircraft mode radar-state scheme updated-craft))))
+    ;; bearing and distance
+    (draw-bd radar)
     ;; reset camera mode for UI
     (q/hint :disable-depth-test)
     (q/camera)
@@ -159,6 +162,7 @@
       (q/text (str (:callsign selected-craft)) 
               bar-padding 
               (- (q/height) bar-padding)))
+    ;; input mode
     (case input-mode
       ;; flight strips mode
       :strips (q/with-translation strips-bay-offset
@@ -262,7 +266,8 @@
                         :voice voice
                         :aircraft {}}
                        (create-lists)
-                       (create-output-buffers)]))]
+                       (create-output-buffers)
+                       (create-bd)]))]
     (q/defsketch xradar
       :title "xRadar"
       :setup setup

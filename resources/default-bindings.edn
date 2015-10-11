@@ -20,12 +20,6 @@
 #map/normal/- (zoom-view :out)
 #map/normal/m center-view
 
-; info box adjustment
-#map/normal/H (info-box-length -4)
-#map/normal/J (info-box-rotate 45)
-#map/normal/K (info-box-rotate -45)
-#map/normal/L (info-box-length 4)
-
 ; output scrolling
 #map/normal/<ctrl-b> (output-scroll 1)
 #map/normal/<ctrl-f> (output-scroll -1)
@@ -58,11 +52,26 @@
 #map/normal/r reply-private-chat
 #map/normal/R prompt-reply-private-chat
 
-;; Pilot config/editing
+;;
+;; Commands that require a selected aircraft
+;;  (a few others do too)
+;;
+
+; info box adjustment
+#map/normal/H (info-box-length -4)
+#map/normal/J (info-box-rotate 45)
+#map/normal/K (info-box-rotate -45)
+#map/normal/L (info-box-length 4)
+
+; Pilot config/editing
 #map/normal/es (config :scratch)
 #map/normal/ek (config :squawk)
 #map/normal/em (config :remarks)
 #map/normal/er (config :route)
+
+; bearing/distance toggling
+#map/normal/b (toggle-bearing-distance :aircraft)
+#map/normal/B (toggle-bearing-distance :waypoint)
 
 ;;
 ;; Flight Strip mode ("strips")

@@ -1,7 +1,8 @@
 (ns ^{:author "Daniel Leong"
       :doc "Utilities"}
   xradar.util
-  (:require [clojure.core.matrix :refer [matrix inner-product set-current-implementation]]
+  (:require [clojure.string :refer [upper-case]]
+            [clojure.core.matrix :refer [matrix inner-product set-current-implementation]]
             [clojure.java.io :refer [file]]
             [quil.core :as q]
             [seesaw
@@ -9,7 +10,7 @@
              [core :as s]]
             [xradar
              [network :refer [get-controllers]]
-             [scene :refer [get-center get-lon-scale loaded?]]]))
+             [scene :refer [find-point get-center get-lon-scale loaded?]]]))
 
 (set-current-implementation :vectorz) 
 
@@ -21,8 +22,18 @@
   (let [network (:network radar)
         controllers (get-controllers network)]
     (->> controllers
-        (filter #(= cid (:cid %)))
+        (filter #(or (= cid (:cid %))
+                     (= cid (:callsign %))))
         first)))
+
+(defn bearing-to
+  "Calculate the bearing from one point to another"
+  ([p1 p2]
+   (bearing-to (:y p1) (:x p1) (:y p2) (:x p2)))
+  ([lat1 lon1 lat2 lon2]
+   (Math/atan2 
+     (- lat2 lat1)
+     (- lon2 lon1))))
 
 (defn distance-between
   "Calculate the distance between two scaled coordinates
@@ -137,16 +148,36 @@
     coll))
 
 (defn object-for
-  "Returns the pilot/controller object of the 
-  given cid"
+  "Returns the pilot/controller/waypoint object 
+  of the given cid"
   [state cid]
   (let [radar (if (map? state)
                 state
                 @state)]
     (get-in radar
             [:aircraft cid]
-            ;; try controller
-            (cid-to-controller radar cid))))
+            ;; try controller or waypoint
+            (or (cid-to-controller radar cid)
+                (when-let [scene (:scene radar)]
+                  (find-point scene cid))))))
+
+(defn resolve-id
+  "Clean up a user-inputted ID, possibly a CID,
+  a callsign for a pilot or controller, or a waypoint.
+  Returns nil if the id didn't appear to refer to anything."
+  [state id]
+  (if (number? id)
+    (when (object-for state id)
+      id)
+    (let [clean (upper-case id)]
+      (if (object-for state clean)
+        clean
+        ;; iterate over aircraft callsigns
+        (->> (:aircraft @state)
+             vals
+             (filter #(= clean (:callsign %)))
+             first
+             :cid)))))
 
 (defn resolve-file
   [path]

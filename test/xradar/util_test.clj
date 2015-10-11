@@ -19,3 +19,14 @@
     (is (= [{:win 4} {:bar 2} {:baz 3}]
            (list-replace {:foo 1} {:win 4} 
                          [{:foo 1} {:bar 2} {:baz 3}])))))
+
+(deftest bearing-test
+  (testing "Bearing"
+    (is (= (/ Math/PI 4)
+           (bearing-to {:x 2 :y 2} {:x 4 :y 4})))
+    (is (= (/ Math/PI 2)
+           (bearing-to {:x 2 :y 2} {:x 2 :y 4})))
+    (is (= Math/PI
+           (bearing-to {:x 2 :y 2} {:x 0 :y 2})))
+    (is (= (* (/ Math/PI 4) -3)
+           (bearing-to {:x 4 :y 4} {:x 2 :y 2})))))
