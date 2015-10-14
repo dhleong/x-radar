@@ -2,14 +2,41 @@
       :doc "Timer Utils"}
   xradar.timers
   (:require [quil.core :as q]
-            [xradar.util :refer [with-alpha]]))
+            [seesaw.core :as s]
+            [xradar
+             [tone :refer [tone pause play]]
+             [util :refer [with-alpha]]]))
+
+;;
+;; Constants
+;;
 
 (def text-size 10)
+(def alarm-hz 1400)
+(def format-times-up " --:-- ")
+
+;;
+;; Global State
+;;
 
 ;; global timers
 (defonce all-timers (atom {}))
 
-(def format-times-up " --:-- ")
+;;
+;; Functions
+;;
+
+(defn alarm
+  [& _]
+  (-> (tone alarm-hz 100)
+      (pause 30)
+      (tone alarm-hz 100)
+      (pause 30)
+      (tone alarm-hz 100)
+      (pause 30)
+      (tone alarm-hz 100)
+      ;
+      play))
 
 (defn draw-timers 
   [radar]
@@ -53,9 +80,16 @@
         end (+ (System/currentTimeMillis) millis)]
     (if-let [[_ timer] (get @all-timers duration-minutes)]
       (do
-        ;; TODO Cancel the timer
+        (.stop timer)
         (swap! all-timers dissoc duration-minutes)
         false)
       (do
-        (swap! all-timers assoc duration-minutes [end nil])  ;; TODO timer
+        (swap! all-timers 
+               assoc 
+               duration-minutes 
+               [end (s/timer
+                      alarm
+                      :repeats? true
+                      :delay 1200
+                      :initial-delay millis)])
         true))))
