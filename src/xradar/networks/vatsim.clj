@@ -8,8 +8,9 @@
              [chat :refer [receive-from receive-from-private]]
              [network :refer [XRadarNetwork]]
              [output :refer [append-output]]
-             [weather :refer [receive-metar!]]
-             [util :refer [deep-merge]]]))
+             [radar-util :refer [update-aircraft]]
+             [util :refer [deep-merge]]
+             [weather :refer [receive-metar!]]]))
 
 (require-stub aileron.core :as a :else xradar.stubs.aileron)
 
@@ -96,6 +97,10 @@
          (map
            (partial expand-static state)
            raw-atis)))
+    ;; TODO remove aircraft on leave
+    (a/listen conn
+              :aircraft
+              #(update-aircraft @state-atom %))
     ;; TODO remove controllers on leave
     (a/listen conn
               :controllers 
