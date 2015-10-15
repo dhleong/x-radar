@@ -2,10 +2,12 @@
       :doc "Vatsim network implementation"}
   xradar.networks.vatsim
   (:require [stubby.core :refer [require-stub]]
+            [asfiled.vatsim :as vatsim]
             [xradar
              [alias :refer [expand-static]]
              [chat :refer [receive-from receive-from-private]]
              [network :refer [XRadarNetwork]]
+             [output :refer [append-output]]
              [weather :refer [receive-metar!]]
              [util :refer [deep-merge]]]))
 
@@ -38,10 +40,10 @@
     (vals @controllers-atom))
   (get-servers
     [this]
-    ;; TODO use real info; fetch at some point
-    {"USA-E" 
-     {:ip "127.0.0.1"
-      :location "New York, USA"}})
+    (let [servers (vatsim/get-servers)]
+      (zipmap 
+        (map :id servers)
+        servers)))
   (my-callsign
     [this]
     (a/field conn :callsign))
@@ -69,6 +71,17 @@
 (defn create-network
   "Expects an atom that resolves to the state atom"
   [state-atom]
+  (future
+    ;; pre-fetch servers asynchronously
+    (if-let [servers (vatsim/get-servers)]
+      (when-let [state @state-atom]
+        (append-output state (str "Found " (count servers) " servers")
+                       :color :success
+                       :flag :status))
+      (when-let [state @state-atom]
+        (append-output state "Error fetching Vatsim servers"
+                       :color :warning
+                       :flag :status))))
   (let [controllers (atom {})
         conn 
         (a/create-connection
