@@ -4,6 +4,7 @@
   (:require [stubby.core :refer [require-stub]]
             [xradar
              [alias :refer [expand-static]]
+             [chat :refer [receive-from receive-from-private]]
              [network :refer [XRadarNetwork]]
              [weather :refer [receive-metar!]]
              [util :refer [deep-merge]]]))
@@ -92,6 +93,13 @@
     (a/listen conn
               :metars
               #(receive-metar! @state-atom %))
+    (a/listen conn
+              :messages
+              #(let [state @state-atom
+                     {:keys [from text]} %]
+                 (if (:freq %)
+                   (receive-from state from text) ;; TODO include freq?
+                   (receive-from-private state from text))))
     (->VatsimNetwork
      conn
      controllers)))
