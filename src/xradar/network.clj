@@ -69,12 +69,18 @@
   (request-atis
     [this controller-id]
     "Request ATIS from the controller with the given id")
+  (request-metar
+    [this airport-icao]
+    "Request METAR updates for the given airport")
   (send!
     [this message]
     "Send a message on the active frequency")
   (send-to!
     [this cid message]
     "Send a private message to the provided pilot")
+  (stop-request-metar
+    [this airport-icao]
+    "STOP requesting METAR updates for the given airport")
   (update-flightplan
     [this aircraft]
     "Update the provided aircraft's flightplan"))

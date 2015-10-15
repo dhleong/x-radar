@@ -426,12 +426,16 @@
                          "ATIS Result for JFK_TWR"
                          :with 112
                          :with-label "JFK_TWR"))
+        (request-metar [this airport-icao]
+          (append-output radar "Requested weather"))
         (send! [this message]
           ;; use future to avoid deadlock
           (future (swap! (:input @radar) #(assoc % :last-echo (str ">>" message)))))
         (send-to! [this cid message]
           ;; use future to avoid deadlock
           (future (swap! (:input @radar) #(assoc % :last-echo (str ">>" cid ": " message)))))
+        (stop-request-metar [this airport-icao]
+          (append-output radar "Cancel requested weather"))
         (update-flightplan [this aircraft]
           (def last-action {:update-fp aircraft})))
       my-voice))

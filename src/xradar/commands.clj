@@ -21,7 +21,8 @@
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
                               get-controllers push-strip!
-                              request-atis
+                              request-atis request-metar
+                              stop-request-metar
                               update-flightplan]]
              [notif :refer [ack-attention!]]
              [output :refer [append-output 
@@ -918,6 +919,7 @@
   ([machine state icao]
    (unwatch-weather! icao)
    (redraw state)
+   (stop-request-metar (:network @state) icao)
    (notify-mode :normal "Removed watch for " (upper-case icao))))
 
 (defn weather-watch
@@ -930,6 +932,7 @@
   ([machine state icao]
    (watch-weather! icao)
    (redraw state)
+   (request-metar (:network @state) icao)
    (notify-mode :normal "Watching weather at " (upper-case icao))))
 
 (defn weather-toggle-metar

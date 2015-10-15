@@ -11,6 +11,7 @@
 (defstub field)
 (defstub listen)
 (defstub request-atis)
+(defstub request-metar)
 (defstub send!)
 (defstub transmit!)
 (defstub update!)
