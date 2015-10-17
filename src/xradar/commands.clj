@@ -745,23 +745,41 @@
     ;; invalid
     (doecho "Invalid direction " direction)))
 
+
+(defn set-zoom
+  "Set the zoom level directly."
+  [machine state amount]
+  (if-let [swapper 
+           (cond
+             (fn? amount) amount
+             (number? amount) (constantly amount)
+             (string? amount) (try
+                                (let [as-num (Double/parseDouble amount)]
+                                  (constantly as-num))
+                                (catch NumberFormatException e)))]
+    (let [updated (swap! state 
+                         (fn [state]
+                           (assoc state :zoom (swapper state))))] 
+      (notify-mode :normal "Zoom set to " (:zoom updated)))
+    ;; invalid
+    (notify-mode :normal "Unable to set zoom to: " amount)))
+
+
 (defn zoom-view
+  "Zoom in or out relative to the current zoom level.
+  Provide :in or :out to zoom a default distance, or
+  use a negative or positive number to zoom in or out,
+  respectively, by a custom distance."
   [machine state direction]
   (if-let [dir
            (case direction
              :in (- zoom-distance)
-             :out zoom-distance)]
-    (do
-      (swap! state
-             (fn [state modifier]
-               (assoc state
-                      :zoom
-                      (+ (:zoom state) modifier)))
-             dir)
-      ;; return the machine unchanged
-      machine)
+             :out zoom-distance
+             (when (number? direction)
+               direction))]
+    (set-zoom machine state #(+ (:zoom %) dir))
     ;; invalid
-    (doecho "Invalid zoom direction " direction)))
+    (notify-mode :normal "Invalid zoom direction " direction)))
 
 ;;
 ;; Flight strip commands
