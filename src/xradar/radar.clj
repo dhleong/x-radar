@@ -143,7 +143,7 @@
                   x y 0
                   0 1 0)
         (q/end-camera))
-      (draw-scene scene profile))
+      (draw-scene scene profile this-zoom))
     (if (not scene-loaded)
       (q/text "Loading..." 20 20))
     (let [radar-state (assoc radar :mode input-mode)]

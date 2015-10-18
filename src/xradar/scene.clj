@@ -6,9 +6,11 @@
   "Represents scenery, usually backed by
   a file"
   (draw-scene
-    [this profile]
+    [this profile this-zoom]
     "Draw the elements of the scene as specified
-    by the `:draw` list in the `:profile`")
+    by the `:draw` list in the `:profile`. The 
+    current zoom level `this-zoom` is also provided
+    for occlusion purposes (if necessary)")
   (get-center
     [this]
     "Get the center coordinate as {:x, :y}

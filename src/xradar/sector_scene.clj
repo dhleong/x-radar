@@ -356,16 +356,26 @@
                  (str "Error drawing " mode ": " element)
                  e))))))
 
+(defn- occlude-zoom
+  "Return true if we should occlude the mode
+  because of the zoom level"
+  [mode this-zoom]
+  (case mode
+    :labels (> this-zoom 500)
+    ;; anything else can just always be drawn
+    nil))
+
 (defn- do-draw-scene
   "Separate for easier tweaking in repl"
-  [data profile]
+  [data profile this-zoom]
   (let [start (System/currentTimeMillis)]
     (doseq [mode (-> profile :draw)]
-      (case mode
-        :geo (draw-each data :geo-shapes draw-shape)
-        :labels (draw-each data :labels draw-label)
-        ;; else, unsupported type
-        nil))
+      (when-not (occlude-zoom mode this-zoom)
+        (case mode
+          :geo (draw-each data :geo-shapes draw-shape)
+          :labels (draw-each data :labels draw-label)
+          ;; else, unsupported type
+          nil)))
     (def duration (- (System/currentTimeMillis) start))))
 
 ;;
@@ -374,9 +384,9 @@
 
 (deftype SectorScene [data-atom]
   XScene
-  (draw-scene [this profile]
+  (draw-scene [this profile this-zoom]
     (if-let [data @data-atom]
-      (do-draw-scene data profile)))
+      (do-draw-scene data profile this-zoom)))
   (get-center [this]
     (when-let [info (-> @data-atom :info)]
       (-> info :center)))
