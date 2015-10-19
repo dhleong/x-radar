@@ -50,6 +50,8 @@
     (a/handoff-accept conn cid))
   (handoff-reject [this cid]
     (a/handoff-reject conn cid))
+  (handoff! [this controller-id cid]
+    (a/handoff! conn controller-id cid))
   (my-callsign
     [this]
     (a/field conn :callsign))

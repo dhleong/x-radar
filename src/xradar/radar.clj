@@ -422,6 +422,9 @@
         (handoff-reject [this cid]
           ;; just ignore
           nil)
+        (handoff! [this controller-id cid]
+          ;; just ignore
+          nil)
         (my-callsign [this]
           (:callsign @radar-connection))
         (push-strip! [this cid strip]

@@ -70,6 +70,12 @@
                  (+ offset text-size))))
       (q/text "No matches" center-x first-line))))
 
+(defn callback
+  "Retrieve the callback symbol passed to
+  start most-recently, if any"
+  [state]
+  (:select-callback @state))
+
 (defn start
   "Start selection mode.
   on-cancel and on-select MUST
@@ -77,7 +83,7 @@
   If to-string is provided, it will be used
   to generate the string values to display
   for each item."
-  [machine radar & {:keys [items
+  [machine state & {:keys [items
                            on-cancel on-select
                            prompt to-string
                            require-items]
@@ -87,9 +93,10 @@
          (or (false? require-items) (seq items))]}
   (let [bindings (to-bindings items on-select)
         string-pred (or to-string str)]
-    (swap! radar 
+    (swap! state 
            #(assoc %
                    :select-bindings (from-bindings bindings)
+                   :select-callback on-select
                    :select-to-string string-pred
                    :select-prompt prompt))
     (try

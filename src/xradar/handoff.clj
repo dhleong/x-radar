@@ -44,7 +44,7 @@
 
 (defn propose-handoff
   [state cid receiver]
-  (n/handoff! (:network @state) cid))
+  (n/handoff! (:network @state) receiver cid))
 
 (defn reject-handoff
   "Reject handoff of the given aircraft

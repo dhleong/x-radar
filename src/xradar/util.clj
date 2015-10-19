@@ -149,17 +149,22 @@
 
 (defn object-for
   "Returns the pilot/controller/waypoint object 
-  of the given cid"
+  of the given cid. If it's already an object,
+  we simply pass it through"
   [state cid]
-  (let [radar (if (map? state)
-                state
-                @state)]
-    (get-in radar
-            [:aircraft cid]
-            ;; try controller or waypoint
-            (or (cid-to-controller radar cid)
-                (when-let [scene (:scene radar)]
-                  (find-point scene cid))))))
+  (if (map? cid)
+    ;; we already have the object
+    cid
+    ;; need to find it
+    (let [radar (if (map? state)
+                  state
+                  @state)]
+      (get-in radar
+              [:aircraft cid]
+              ;; try controller or waypoint
+              (or (cid-to-controller radar cid)
+                  (when-let [scene (:scene radar)]
+                    (find-point scene cid)))))))
 
 (defn resolve-id
   "Clean up a user-inputted ID, possibly a CID,
@@ -178,6 +183,18 @@
              (filter #(= clean (:callsign %)))
              first
              :cid)))))
+
+(defn resolve-obj
+  "Given some object-like input, which is either an
+  actual object or an arg accepted by resolve-id, 
+  return the full object."
+  [state obj-or-id]
+  (if (map? obj-or-id)
+    obj-or-id
+    (if-let [obj (object-for state obj-or-id)]
+      obj
+      (when-let [id (resolve-id state obj-or-id)]
+        (object-for state id)))))
 
 (defn resolve-file
   [path]

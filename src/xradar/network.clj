@@ -66,7 +66,7 @@
     [this cid]
     "Reject handoff of the aircraft with the given CID")
   (handoff!
-    [this cid]
+    [this controller-id cid]
     "Propose a handoff of the aircraft with the given CID")
   (my-callsign
     [this]
