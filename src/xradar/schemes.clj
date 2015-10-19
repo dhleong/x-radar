@@ -24,6 +24,7 @@
     :text 0xffCCCCCC
     :error 0xffEE0000
     :warning 0xffEE0000}
+   :runway 0xffFFFFFF
    :strips
    {:border 0xff000000
     :selected-border 0xffFFFFFF

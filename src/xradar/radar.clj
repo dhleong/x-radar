@@ -68,7 +68,7 @@
   [profile]
   (deep-merge {:arrivals []
                :departures []
-               :draw [:geo :labels]
+               :draw [:geo :labels :runway]
                :mode (create-mode)
                :output-size 5
                :scheme schemes/default

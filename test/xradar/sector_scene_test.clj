@@ -135,7 +135,7 @@
                :magnetic [36 216]
                :start {:x (* -73 coord-scale) :y (* -44 coord-scale)}
                :end {:x (* -74 coord-scale) :y (* -45 coord-scale)}}]
-             (-> data :runways))))))
+             (-> data :runway))))))
 
 (deftest shapes-test
   (testing "Single shape shapes"

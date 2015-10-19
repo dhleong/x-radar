@@ -7,7 +7,8 @@
              [core :as q]]
             [xradar
              [scene :refer :all]
-             [util :refer [coord-scale deep-merge in-bounds map-coord]]]))
+             [util :refer [coord-scale bearing-to deep-merge
+                           in-bounds map-coord]]]))
 
 ;;
 ;; Constants
@@ -198,8 +199,8 @@
                        data
                        (->> parts (drop 6) (take 2)))}]
     (assoc data 
-           :runways
-           (conj (get data :runways []) 
+           :runway
+           (conj (get data :runway []) 
                  info))))
 
 ;;
@@ -331,17 +332,26 @@
 ;; Art utils
 ;;
 
+(defmacro arity 
+  [fun]
+  `(->> (var ~fun)
+        meta
+        :arglists
+        first
+        count))
+
 (defn- draw-line
-  [line]
+  [line & [default-color]]
   (let 
     [x1 (:x (:start line))
      y1 (:y (:start line))
      x2 (:x (:end line))
      y2 (:y (:end line))]
     (when (or (in-bounds x1 y1) (in-bounds x2 y2))
-      (q/stroke-int (:color line))
+      (q/stroke-int (:color line default-color))
       (q/stroke-weight 1)
-      (q/line x1 y1 x2 y2))))
+      (q/line x1 y1 x2 y2)
+      true)))
 
 (defn- draw-label
   [label]
@@ -366,16 +376,39 @@
         (q/vertex (:x vertex) (:y vertex)))
       (q/end-shape))))
 
-(defn- draw-each
-  [data mode artist]
-  (doseq [element (get data mode)]
-    (try
-      (artist element)
-      (catch Exception e
-        (def last-exc e)
-        (throw (RuntimeException. 
-                 (str "Error drawing " mode ": " element)
-                 e))))))
+(defn- draw-runway
+  [profile runway]
+  (let [runway-color (-> profile :scheme :runway)]
+    (when (draw-line runway runway-color)
+      (let [start (:start runway)
+            end (:end runway)
+            x1 (:x start)
+            y1 (:y start)
+            x2 (:x end)
+            y2 (:y end)
+            rotation (bearing-to start end)]
+        (q/text-align :center)
+        (q/text-size 3)
+        (q/fill-int runway-color)
+        (q/with-translation [x1 y1]
+          (q/with-rotation [(- rotation (/ Math/PI 2))]
+           (q/text (first (:labels runway)) 0 0)))
+        (q/with-translation [x2 y2]
+          (q/with-rotation [(+ rotation (/ Math/PI 2))]
+           (q/text (last (:labels runway)) 0 0)))))))
+
+(defmacro draw-each
+  [mode artist]
+  `(doseq [element# (get ~'data ~mode)]
+     (try
+       (case (arity ~artist)
+         1 (~artist element#)
+         2 (~artist ~'profile element#))
+       (catch Exception e#
+         (def last-exc e#)
+         (throw (RuntimeException. 
+                  (str "Error drawing " ~mode ": " element#)
+                  e#))))))
 
 (defn- occlude-zoom
   "Return true if we should occlude the mode
@@ -393,8 +426,9 @@
     (doseq [mode (-> profile :draw)]
       (when-not (occlude-zoom mode this-zoom)
         (case mode
-          :geo (draw-each data :geo-shapes draw-shape)
-          :labels (draw-each data :labels draw-label)
+          :geo (draw-each :geo-shapes draw-shape)
+          :labels (draw-each :labels draw-label)
+          :runway (draw-each :runway draw-runway)
           ;; else, unsupported type
           nil)))
     (def duration (- (System/currentTimeMillis) start))))
