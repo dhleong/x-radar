@@ -17,6 +17,7 @@
              [connection-config :refer [open-connection]]
              [flight-plan :refer [open-flight-plan]]
              [flight-strips :as fs]
+             [handoff :as ho]
              [lists :refer [toggle-list]]
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
@@ -604,6 +605,66 @@
   [machine state]
   (commit-profile state)
   (doecho "Settings written to disk."))
+
+;;
+;; Handoffs
+;;
+
+(defn accept-handoff
+  ([machine state]
+   (with-selected
+     (accept-handoff machine state selected)))
+  ([machine state method-or-cid]
+   (if (symbol? method-or-cid)
+     (case method-or-cid
+       ;; TODO implement
+       start-select-aircraft (notify-mode :normal "Not implemented yet s")
+       start-search-aircraft (notify-mode :normal "Not implemented yet /")
+       (notify-mode :normal "Illegal selection method: " method-or-cid))
+     ;; must be a cid
+     (if (ho/accept-handoff state method-or-cid)
+       (notify-mode :normal "Accepted handoff of " method-or-cid)
+       (notify-mode :normal method-or-cid " is not being handed off")))))
+
+(defn cancel-handoff
+  [machine state]
+  (to-mode :normal))
+
+(defn propose-handoff
+  ([machine state]
+   (with-selected
+     ;;
+     (let [network (:network @state)
+           targets (get-controllers network)]
+       (if-not (empty? targets)
+         (start-select machine state
+                       :items targets
+                       :prompt "Receiving controller:"
+                       :to-string #(:callsign %)
+                       :on-cancel 'cancel-handoff
+                       :on-select 'propose-handoff)
+         (doecho "No other controllers to push to")))))
+  ([machine state receiver]
+   ;; TODO ensure receiver is a map
+   (with-selected
+     (ho/propose-handoff state selected receiver)
+     (notify-mode :normal "Handoff " selected " to " (:callsign receiver)))))
+
+(defn reject-handoff
+  ([machine state]
+   (with-selected
+     (reject-handoff machine state selected)))
+  ([machine state method-or-cid]
+   (if (symbol? method-or-cid)
+     (case method-or-cid
+       start-select-aircraft (notify-mode :normal "Not implemented yet s")
+       start-search-aircraft (notify-mode :normal "Not implemented yet /")
+       (notify-mode :normal "Illegal selection method: " method-or-cid))
+     ;; must be a cid
+     (if (ho/reject-handoff state method-or-cid)
+       (notify-mode :normal "Rejected handoff of " method-or-cid)
+       (notify-mode :normal method-or-cid " is not being handed off")))))
+
 
 ;;
 ;; Info box manipulation

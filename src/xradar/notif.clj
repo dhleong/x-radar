@@ -50,7 +50,7 @@
 
 (defn request-attention!
   "Request attention to the app when not focused"
-  [& {:keys [is-critical topic]
+  [& {:keys [is-critical topic] ;; FIXME refactor is-critical to `critical?`
       :or {is-critical false}}]
   (when topic
     (cond
