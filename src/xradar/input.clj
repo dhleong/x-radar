@@ -57,6 +57,7 @@
   (let [key-raw (case (:key-code event)
                   27 "ESC"
                   9 "TAB"
+                  16 "shift"
                   32 "SPACE"
                   45 (str (:raw-key event))
                   47 "SLASH"
