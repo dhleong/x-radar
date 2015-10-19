@@ -59,6 +59,15 @@
     Info is itself a map containing:
     {:ip 'IP address'
      :location 'New York, USA'}")
+  (handoff-accept
+    [this cid]
+    "Accept handoff of the aircraft with the given CID")
+  (handoff-reject
+    [this cid]
+    "Reject handoff of the aircraft with the given CID")
+  (handoff!
+    [this cid]
+    "Propose a handoff of the aircraft with the given CID")
   (my-callsign
     [this]
     "Return the callsign we connected as")

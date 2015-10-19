@@ -5,9 +5,11 @@
             [quil
              [core :as q]]
             [xradar
+             [network :as n]
              [notif :refer [ack-attention! request-attention!]]
+             [radar-util :refer [redraw]]
              [scene :refer :all]
-             [util :refer [coord-scale deep-merge in-bounds map-coord]]]))
+             [util :refer [coord-scale deep-merge in-bounds map-coord]] ]))
 
 (defonce pending-handoffs (atom #{}))
 
@@ -24,10 +26,12 @@
 
 (defn on-handoff
   "Call when a new handoff has arrived"
-  [cid]
+  [state cid]
   (let [new-pending (swap! pending-handoffs conj cid)]
     (when (= 1 (count new-pending)) 
-      (request-attention! :topic :handoff :is-critical true))))
+      (request-attention! :topic :handoff :is-critical true))
+    (when state ;; basically for testing
+      (redraw state))))
 
 (defn accept-handoff
   "Accept handoff of the given aircraft.
@@ -35,13 +39,12 @@
   to accept, else nil"
   [state cid]
   (when (clear-pending cid)
-    ;; TODO network
+    (n/handoff-accept (:network @state) cid)
     true))
 
 (defn propose-handoff
   [state cid receiver]
-  ;; TODO network
-  )
+  (n/handoff! (:network @state) cid))
 
 (defn reject-handoff
   "Reject handoff of the given aircraft
@@ -49,5 +52,5 @@
   to reject, else nil"
   [state cid]
   (when (clear-pending cid)
-    ;; TODO network
+    (n/handoff-reject (:network @state) cid)
     true))
