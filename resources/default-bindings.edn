@@ -59,6 +59,18 @@
 #map/normal/t4 (toggle-timer 4)
 
 ;;
+;; Handoffs
+;;
+
+#map/normal/faa accept-handoff
+#map/normal/fas (accept-handoff start-select-aircraft)
+#map/normal/fa<slash> (accept-handoff start-search-aircraft)
+#map/normal/frr reject-handoff
+#map/normal/frs (reject-handoff start-select-aircraft)
+#map/normal/fr<slash> (reject-handoff start-search-aircraft)
+#map/normal/fp propose-handoff
+
+;;
 ;; Commands that require a selected aircraft
 ;;  (a few others do too)
 ;;

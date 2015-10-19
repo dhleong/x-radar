@@ -17,6 +17,7 @@
              [connection-config :refer [open-connection]]
              [flight-plan :refer [open-flight-plan]]
              [flight-strips :as fs]
+             [handoff :as ho]
              [lists :refer [toggle-list]]
              [native-insert :refer [create-insert input-height]]
              [network :refer [connect! connected? disconnect!
@@ -34,7 +35,7 @@
              [selection :refer [to-bindings from-bindings]]
              [selection-mode :as sm]
              [timers :as timers]
-             [util :refer [deep-merge in-bounds resolve-id]]
+             [util :refer [deep-merge in-bounds resolve-id resolve-obj]]
              [voice :as v]
              [voice-config :refer [open-voice-comms]]
              [weather :refer [mark-acked! unwatch-weather!
@@ -109,7 +110,7 @@
                    body)] 
     `(with-selected ~error-msg
        (if-let [~'craft (get-in (deref ~'state) [:aircraft ~'selected])]
-         ~@the-body
+         (do ~@the-body)
          (notify-mode :normal "No such aircraft" ~'selected)))))
 
 (defmacro with-machine
@@ -320,34 +321,43 @@
 (defn- select-aircraft-filter
   "Start or update select mode with
   aircraft, based on a search param"
-  [state search-filter & [machine]]
+  [state search-filter callback-symbol & [machine]]
   (let [targets (search-filtered-aircraft state search-filter)]
     (redraw state)
     (start-select (or machine {}) state
                   :items targets
                   :to-string #(:callsign %)
                   :on-cancel 'cancel-toggle-chat
-                  :on-select 'select-aircraft)))
+                  :on-select callback-symbol)))
 
 
 (defn start-search-aircraft
   ([machine state]
-   (let [targets (vals (:aircraft @state))
-         insert-mac
-         (start-insert machine state
-                       :prompt " /"
-                       :history []
-                       :on-change select-aircraft-filter
-                       :on-submit start-search-aircraft)
-         select-mac
-         (select-aircraft-filter state "")]
-     (merge insert-mac select-mac)))
-  ([machine state search-param]
-   (let [targets (search-filtered-aircraft state search-param)]
-     (case (count targets)
-       0 (notify-mode :normal "No matching aircraft")
-       1 (select-aircraft machine state (first targets))
-       (select-aircraft-filter state search-param machine)))))
+   (start-search-aircraft machine state 'select-aircraft))
+  ([machine state search-param-or-callback]
+   (if (symbol? search-param-or-callback)
+     ;; initialize with a callback
+     (let [targets (vals (:aircraft @state))
+           insert-mac
+           (start-insert machine state
+                         :prompt " /"
+                         :history []
+                         :on-change (fn [state search-filter]
+                                      (select-aircraft-filter 
+                                        state search-filter 
+                                        search-param-or-callback))
+                         :on-submit start-search-aircraft)
+           select-mac
+           (select-aircraft-filter state "" search-param-or-callback)]
+       (merge insert-mac select-mac))
+     ;; searching callback
+     (let [targets (search-filtered-aircraft state search-param-or-callback)
+           callback-symbol (sm/callback state)
+           callback-fn (ns-resolve 'xradar.commands callback-symbol)]
+       (case (count targets)
+         0 (notify-mode :normal "No matching aircraft")
+         1 (callback-fn machine state (first targets))
+         (select-aircraft-filter state search-param-or-callback machine))))))
 
 ;;
 ;; Output navigation
@@ -604,6 +614,72 @@
   [machine state]
   (commit-profile state)
   (doecho "Settings written to disk."))
+
+;;
+;; Handoffs
+;;
+
+(defn accept-handoff
+  ([machine state]
+   (with-selected
+     (accept-handoff machine state selected)))
+  ([machine state method-or-cid]
+   (if (symbol? method-or-cid)
+     (case method-or-cid
+       ;; NB should we filter the candidates?
+       start-select-aircraft (start-select-aircraft machine state 'accept-handoff)
+       start-search-aircraft (start-search-aircraft machine state 'accept-handoff)
+       (notify-mode :normal "Illegal selection method: " method-or-cid))
+     ;; must be a cid (or obj)
+     (let [obj (resolve-obj state method-or-cid)
+           callsign (:callsign obj)]
+       (if (ho/accept-handoff state (:cid obj))
+         (notify-mode :normal "Accepted handoff of " callsign)
+         (notify-mode :normal callsign " is not being handed off"))))))
+
+(defn cancel-handoff
+  [machine state]
+  (to-mode :normal))
+
+(defn propose-handoff
+  ([machine state]
+   (with-selected
+     ;;
+     (let [network (:network @state)
+           targets (get-controllers network)]
+       (if-not (empty? targets)
+         (start-select machine state
+                       :items targets
+                       :prompt "Receiving controller:"
+                       :to-string #(:callsign %)
+                       :on-cancel 'cancel-handoff
+                       :on-select 'propose-handoff)
+         (doecho "No other controllers to push to")))))
+  ([machine state receiver]
+   (let [controller (resolve-obj state receiver)]
+     (with-selected-craft
+       (ho/propose-handoff state selected (:cid controller))
+       (notify-mode :normal 
+                    "Handed " (:callsign craft)
+                    " to " (:callsign controller))))))
+
+(defn reject-handoff
+  ([machine state]
+   (with-selected
+     (reject-handoff machine state selected)))
+  ([machine state method-or-cid]
+   (if (symbol? method-or-cid)
+     (case method-or-cid
+       start-select-aircraft (start-select-aircraft machine state 'reject-handoff)
+       start-search-aircraft (start-search-aircraft machine state 'reject-handoff)
+       (notify-mode :normal "Illegal selection method: " method-or-cid))
+     ;; must be a cid or object
+     (let [obj (resolve-obj state method-or-cid)
+           callsign (:callsign obj)]
+       (if (ho/reject-handoff state (:cid obj))
+         (notify-mode :normal "Rejected handoff of " callsign)
+         (notify-mode :normal callsign " is not being handed off"))))))
+
 
 ;;
 ;; Info box manipulation

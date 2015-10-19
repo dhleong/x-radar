@@ -416,6 +416,15 @@
         (get-servers [this]
           {"USA-E" {:ip "97.107.135.245"}
            "USA-W" {:ip "50.116.3.203"}})
+        (handoff-accept [this cid]
+          ;; just ignore
+          nil)
+        (handoff-reject [this cid]
+          ;; just ignore
+          nil)
+        (handoff! [this controller-id cid]
+          ;; just ignore
+          nil)
         (my-callsign [this]
           (:callsign @radar-connection))
         (push-strip! [this cid strip]

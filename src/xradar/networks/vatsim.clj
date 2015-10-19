@@ -6,6 +6,7 @@
             [xradar
              [alias :refer [expand-static]]
              [chat :refer [receive-from receive-from-private]]
+             [handoff :refer [on-handoff]]
              [network :refer [XRadarNetwork]]
              [output :refer [append-output]]
              [radar-util :refer [update-aircraft]]
@@ -45,6 +46,12 @@
       (zipmap 
         (map :id servers)
         servers)))
+  (handoff-accept [this cid]
+    (a/handoff-accept conn cid))
+  (handoff-reject [this cid]
+    (a/handoff-reject conn cid))
+  (handoff! [this controller-id cid]
+    (a/handoff! conn controller-id cid))
   (my-callsign
     [this]
     (a/field conn :callsign))
@@ -118,6 +125,10 @@
                  (if (:freq %)
                    (receive-from state from text) ;; TODO include freq?
                    (receive-from-private state from text))))
+    (a/listen conn
+              :handoffs
+              (fn [cid]
+                (on-handoff @state-atom cid)))
     (->VatsimNetwork
      conn
      controllers)))
