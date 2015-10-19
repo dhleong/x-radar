@@ -70,6 +70,8 @@
 #map/normal/fr<slash> (reject-handoff start-search-aircraft)
 #map/normal/fp propose-handoff
 
+#map/normal/T toggle-track
+
 ;;
 ;; Commands that require a selected aircraft
 ;;  (a few others do too)

@@ -90,6 +90,8 @@
   (stop-request-metar
     [this airport-icao]
     "STOP requesting METAR updates for the given airport")
+  (toggle-track!
+    [this cid])
   (update-flightplan
     [this aircraft]
     "Update the provided aircraft's flightplan"))

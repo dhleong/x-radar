@@ -35,6 +35,7 @@
              [selection :refer [to-bindings from-bindings]]
              [selection-mode :as sm]
              [timers :as timers]
+             [track :as trk]
              [util :refer [deep-merge in-bounds resolve-id resolve-obj]]
              [voice :as v]
              [voice-config :refer [open-voice-comms]]
@@ -679,6 +680,14 @@
        (if (ho/reject-handoff state (:cid obj))
          (notify-mode :normal "Rejected handoff of " callsign)
          (notify-mode :normal callsign " is not being handed off"))))))
+
+(defn toggle-track
+  [machine state]
+  (with-selected-craft
+    (redraw state)
+    (if (trk/toggle-track state (:cid craft))
+      (notify-mode :normal "Now tracking " (:callsign))
+      (notify-mode :normal "No longer tracking " (:callsign)))))
 
 ;;
 ;; Info box manipulation
