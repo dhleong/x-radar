@@ -3,6 +3,7 @@
   xradar.modes.mode-util
   (:require [quil.core :as q]
             [xradar
+             [handoff :as ho]
              [radar-util :refer [update-aircraft]]
              [util :refer [object-for]]]))
 
@@ -50,9 +51,10 @@
                                   (map name)
                                   (apply str))
         selected-color (-> scheme :aircraft :selected)
-        craft-color (if (:selected craft)
-                      selected-color
-                      (get-in scheme [:aircraft state]))
+        craft-color (cond
+                      (:selected craft) selected-color
+                      (ho/proposed? (:cid craft)) (-> scheme :aircraft :handing-off)
+                      :else (get-in scheme [:aircraft state]))
         history-color (if (:selected craft)
                         (-> scheme :aircraft :history-selected)
                         (-> scheme :aircraft :history))

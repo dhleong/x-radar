@@ -46,6 +46,12 @@
   [state cid receiver]
   (n/handoff! (:network @state) receiver cid))
 
+(defn proposed?
+  "Check if another controller has proposed a
+  handoff of the cid"
+  [cid]
+  (contains? @pending-handoffs cid))
+
 (defn reject-handoff
   "Reject handoff of the given aircraft
   Returns true when there was such a handoff

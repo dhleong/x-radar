@@ -616,7 +616,7 @@
   (doecho "Settings written to disk."))
 
 ;;
-;; Handoffs
+;; Handoffs and tracking
 ;;
 
 (defn accept-handoff
@@ -679,7 +679,6 @@
        (if (ho/reject-handoff state (:cid obj))
          (notify-mode :normal "Rejected handoff of " callsign)
          (notify-mode :normal callsign " is not being handed off"))))))
-
 
 ;;
 ;; Info box manipulation
