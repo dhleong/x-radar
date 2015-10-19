@@ -232,7 +232,7 @@
       :airport (parse-airport-line data line)
       :geo (parse-geo-line data line)
       :labels (parse-label-line data line)
-      :runway (lparse-runway-line data line)
+      :runway (parse-runway-line data line)
       ;; unsupported section
       nil)))
 
