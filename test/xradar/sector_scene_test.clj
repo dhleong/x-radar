@@ -43,6 +43,16 @@
     "04L 22R 000 000 N042.00.00.000 W071.00.00.000 N043.00.00.000 W072.00.00.000\n"
     "04R 22L 036 216 N044.00.00.000 W073.00.00.000 N045.00.00.000 W074.00.00.000"))
 
+(def data-sid
+  (str "#define Taxiway 14737632\n"
+       "[SID]\n"
+       "+ Video Map - LGA               "
+       "N000.00.000 W000.00.00.000 N000.00.00.000 W000.00.00.000\n"
+       "                                "
+       "N042.00.00.000 W071.00.00.000 N043.00.00.000 W072.00.00.000 Taxiway\n"
+       "                                "
+       "N043.00.00.000 W072.00.00.000 N044.00.00.000 W072.00.00.000 Taxiway"))
+
 (def data-vor
   "[VOR]\nBOS 112.700 N042.00.00.000 W070.00.00.000")
 
@@ -77,6 +87,11 @@
            (parse-coord scene 
                         "S042.00.00.000"
                         "E042.00.00.000"))))
+  (testing "parse-coord with waypoints"
+    (let [scene (load-data data-vor)]
+      ;; be lazy and hope we mapped correctly
+      (is (not= {:x 42 :y 70} 
+                (parse-coord scene "BOS" "BOS")))))
   (testing "parse-coord with scale"
     (let [scene (load-data data-info)]
       ;; be lazy and hope we mapped correctly
@@ -156,11 +171,26 @@
                {:x (* -72 coord-scale) :y (* -44 coord-scale)}]]
              (-> data :geo-shapes)))
       (is (= {:color 0xffE0E0E0
+              :name nil
               :bounds [(* -72 coord-scale)   ; left (min-x)
                        (* -44 coord-scale)   ; top (min-y)
                        (* -71 coord-scale)   ; right (max-x)
                        (* -42 coord-scale)]} ; bottom (max-y)
-             (-> data :geo-shapes first meta))))))
+             (-> data :geo-shapes first meta)))))
+  (testing "SIDs (and STARs)"
+    (let [data (load-data data-sid)]
+      (is (= [[{:x (* -71 coord-scale) :y (* -42 coord-scale)}
+               {:x (* -72 coord-scale) :y (* -43 coord-scale)}
+               {:x (* -72 coord-scale) :y (* -44 coord-scale)}
+               ]]
+             (-> data :sid-shapes)))
+      (is (= {:color 0xffE0E0E0
+              :name "+ Video Map - LGA"
+              :bounds [(* -72 coord-scale)   ; left (min-x)
+                       (* -44 coord-scale)   ; top (min-y)
+                       (* -71 coord-scale)   ; right (max-x)
+                       (* -42 coord-scale)]} ; bottom (max-y)
+             (-> data :sid-shapes first meta))))))
 
 (deftest methods-test
   (testing "find-point"
