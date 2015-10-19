@@ -182,6 +182,26 @@
            :labels
            (conj (get data :labels []) info))))
 
+(defn- parse-runway-line
+  "[RUNWAY]"
+  [data line]
+  (let [parts (split line re-spaces)
+        info 
+        {:labels (take 2 parts)
+         :magnetic (map
+                     #(Integer/parseInt %)
+                     (->> parts (drop 2) (take 2)))
+         :start (apply parse-coord 
+                       data
+                       (->> parts (drop 4) (take 2)))
+         :end (apply parse-coord 
+                       data
+                       (->> parts (drop 6) (take 2)))}]
+    (assoc data 
+           :runways
+           (conj (get data :runways []) 
+                 info))))
+
 ;;
 ;; Parsing loop
 ;;
@@ -211,6 +231,7 @@
       :airport (parse-airport-line data line)
       :geo (parse-geo-line data line)
       :labels (parse-label-line data line)
+      :runway (lparse-runway-line data line)
       ;; unsupported section
       nil)))
 

@@ -37,6 +37,12 @@
        "\"S\" N042.00.00.000 W071.00.00.000 Taxiway\n"
        "\"Awesome Spot\" N042.00.00.000 W071.00.00.000 255"))
 
+(def data-runways
+  (str
+    "[RUNWAY]\n" 
+    "04L 22R 000 000 N042.00.00.000 W071.00.00.000 N043.00.00.000 W072.00.00.000\n"
+    "04R 22L 036 216 N044.00.00.000 W073.00.00.000 N045.00.00.000 W074.00.00.000"))
+
 (def data-vor
   "[VOR]\nBOS 112.700 N042.00.00.000 W070.00.00.000")
 
@@ -118,7 +124,18 @@
               {:label "Awesome Spot"
                :coord {:x (* -71 coord-scale) :y (* -42 coord-scale)}
                :color 0xffFF0000}]
-             (-> data :labels))))))
+             (-> data :labels)))))
+  (testing "[RUNWAY]"
+    (let [data (load-data data-runways)]
+      (is (= [{:labels ["04L" "22R"]
+               :magnetic [0 0]
+               :start {:x (* -71 coord-scale) :y (* -42 coord-scale)}
+               :end {:x (* -72 coord-scale) :y (* -43 coord-scale)}}
+              {:labels ["04R" "22L"]
+               :magnetic [36 216]
+               :start {:x (* -73 coord-scale) :y (* -44 coord-scale)}
+               :end {:x (* -74 coord-scale) :y (* -45 coord-scale)}}]
+             (-> data :runways))))))
 
 (deftest shapes-test
   (testing "Single shape shapes"
