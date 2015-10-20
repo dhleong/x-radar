@@ -19,6 +19,8 @@
 
 (def diagram-name-length 26)
 
+(defonce lazy-inflated-cache (atom {}))
+
 ;;
 ;; Util methods
 ;;
@@ -256,6 +258,24 @@
              section 
              (conj previous-vec info)))))
 
+(defn- lazy-parse-diagram-line
+  [section data line]
+  (let [diagram-name (-> line
+                         (subs 0 diagram-name-length)
+                         (.trim)
+                         (#(when-not (empty? %)
+                             %)))
+        section-data (get data section {})
+        info (if diagram-name
+               (with-meta [line] {:name diagram-name})
+               (when-let [last-name (:last-name section-data)]
+                 (-> (get section-data last-name)
+                     (conj line))))]
+    (when-let [diag-name (:name (meta info))]
+      (-> data
+          (assoc-in [section diag-name] info)
+          (assoc-in [section :last-name] diag-name)))))
+
 ;;
 ;; Parsing loop
 ;;
@@ -288,8 +308,8 @@
         :geo (parse-geo-line data line)
         :labels (parse-label-line data line)
         :runway (parse-runway-line data line)
-        :sid (parse-diagram-line :sid data line)
-        ;; :star (parse-diagram-line :star data line)
+        :sid (lazy-parse-diagram-line :sid data line)
+        :star (lazy-parse-diagram-line :star data line)
         ;; unsupported section
         nil))))
 
@@ -407,8 +427,8 @@
   (with-open [reader (io/reader input)]
     (-> (load-from-reader reader)
         (parse-shapes :geo :geo-shapes)
-        (parse-shapes :sid :sid-shapes)
-        (parse-shapes :star :star-shapes))))
+        #_(parse-shapes :sid :sid-shapes)
+        #_(parse-shapes :star :star-shapes))))
 
 ;;
 ;; Art utils
@@ -505,10 +525,51 @@
     ;; anything else can just always be drawn
     nil))
 
+
+(defn parse-lazy-diagram-lines
+  "Given a lazy sequence of lines from
+  a single diagram, parse it into a 
+  mini data map"
+  [section data lines]
+  (if (empty? lines)
+    data
+    (recur section
+           (parse-diagram-line 
+             section data (first lines))
+           (rest lines))))
+
+(defn ensure-diagram-inflated
+  [section data diagram-name]
+  (when-not (get-in @lazy-inflated-cache 
+                    [:inflated section diagram-name])
+    (swap! 
+      lazy-inflated-cache
+      (fn [cache]
+        (let [shapes-name (keyword (str (name section) "-shapes"))
+              raw-lines (get-in data [section diagram-name])]
+          (-> cache
+              (assoc-in [:inflated section diagram-name] true)
+              (assoc shapes-name
+                     (concat
+                       (get cache shapes-name [])
+                       (-> (parse-lazy-diagram-lines 
+                             ;; FIXME use real data
+                             section {} raw-lines)
+                           (parse-shapes section shapes-name)
+                           (get shapes-name))))))))))
+
+(defn clear-inflated-cache
+  []
+  (swap! lazy-inflated-cache (constantly {})))
+
 (defn- do-draw-scene
   "Separate for easier tweaking in repl"
   [data profile this-zoom]
   (let [start (System/currentTimeMillis)]
+    (doseq [star (-> profile :stars)]
+      (ensure-diagram-inflated :star data star))
+    (doseq [sid (-> profile :sids)]
+      (ensure-diagram-inflated :sid data sid))
     (doseq [mode (-> profile :draw)]
       (when-not (occlude-zoom mode this-zoom)
         (case mode
@@ -517,10 +578,12 @@
           :runway (draw-each :runway draw-runway)
           ;; else, unsupported type
           nil)))
-    (let [stars (hash-set (-> profile :stars))]
+    (let [stars (hash-set (-> profile :stars))
+          data @lazy-inflated-cache]
       (draw-each :star-shapes draw-shape
                 (partial contains? stars)))
-    (let [sids (hash-set (-> profile :sids))]
+    (let [sids (hash-set (-> profile :sids))
+          data @lazy-inflated-cache]
       (draw-each :sid-shapes draw-shape
                  (partial contains? sids)))
     (def duration (- (System/currentTimeMillis) start))))
