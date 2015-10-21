@@ -553,8 +553,9 @@
                      (concat
                        (get cache shapes-name [])
                        (-> (parse-lazy-diagram-lines 
-                             ;; FIXME use real data
-                             section {} raw-lines)
+                             section 
+                             (dissoc data section)
+                             raw-lines)
                            (parse-shapes section shapes-name)
                            (get shapes-name))))))))))
 

@@ -191,15 +191,14 @@
                {:x (* -72 coord-scale) :y (* -44 coord-scale)}
                ]]
              (-> @lazy-inflated-cache :sid-shapes)))
-      ;; FIXME restore
-      #_(is (= {:color 0xffE0E0E0
+      (is (= {:color 0xffE0E0E0
               :name "+ Video Map - LGA"
               :bounds [(* -72 coord-scale)   ; left (min-x)
                        (* -44 coord-scale)   ; top (min-y)
                        (* -71 coord-scale)   ; right (max-x)
                        (* -42 coord-scale)]} ; bottom (max-y)
              (-> @lazy-inflated-cache :sid-shapes first meta)))
-      #_(clear-inflated-cache))))
+      (clear-inflated-cache))))
 
 (deftest methods-test
   (testing "find-point"
