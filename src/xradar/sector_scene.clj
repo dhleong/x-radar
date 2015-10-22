@@ -3,6 +3,8 @@
   xradar.sector-scene
   (:require [clojure.string :refer [lower-case split]]
             [clojure.java.io :as io]
+            [taoensso.timbre.profiling :as profiling
+             :refer (pspy pspy* profile defnp p p*)]
             [quil
              [core :as q]]
             [xradar
@@ -63,25 +65,46 @@
            \E latlon-scale-plus
            \S latlon-scale-plus
            \W latlon-scale-minus)
-         parts (-> coord
-                   (.substring 1)
-                   (split #"\.")
-                   (#(map as-int %)))]
-     (* sign (+ (nth parts 0) ; degrees
-                (/ (nth parts 1) 60) ; minutes
-                (/ (nth parts 2) 3600) ; seconds
-                (/ (nth parts 3 0) 3600000))))) ; decimal seconds
+         ; elegant but slow old method
+         ;; parts (-> coord
+         ;;           (.substring 1)
+         ;;           (split #"\.")
+         ;;           (#(map as-int %)))
+         ;; degrees (nth parts 0)
+         ;; minutes (nth parts 1)
+         ;; seconds (nth parts 2)
+         ;; dec-sec (nth parts 3 0)
+         ; less-elegant but more-efficient new method
+         ; It's DMS format; 
+         ;  degrees: 3-digits wide
+         ;  minutes: 2-digits wide
+         ;  seconds: 2-digits wide
+         ;  decimal: 3-4-digits wide
+         ; and the Decimal is sometimes omitted
+         degrees (as-int (subs coord 1 4))
+         minutes (as-int (subs coord 5 7))
+         seconds (as-int (subs coord 8 10))
+         dec-sec (if (> (count coord) 11)  ;; is there a decimal component?
+                   (as-int (subs coord 11))
+                   0)
+         ]
+     (* sign (+ degrees ; degrees
+                (/ minutes 60) ; minutes
+                (/ seconds 3600) ; seconds
+                (/ dec-sec 3600000))))) ; decimal seconds
   ([scene lat lon]
    (if (and (string? lat)
             (< (count lat) 6)
             (= lat lon))
      ;; waypoint
-     (when-let [point (if (map? scene)
-                        (find-point-in scene lat)
-                        (find-point scene lat))]
-       (select-keys point [:x :y]))
+     (p :expand-waypoint 
+        (when-let [point (if (map? scene)
+                           (find-point-in scene lat)
+                           (find-point scene lat))]
+          (select-keys point [:x :y])))
      ;; coordinates
-     (map-coord scene {:x (parse-coord lon) :y (parse-coord lat)}))))
+     (map-coord scene {:x (p :parse-single-coord (parse-coord lon)) 
+                       :y (p :parse-single-coord (parse-coord lat))}))))
 
 (defn- clean-line
   [line]
@@ -229,10 +252,10 @@
   (let [diagram-name (-> line
                          (subs 0 diagram-name-length)
                          (.trim))
-        parts (-> line
-                  (subs diagram-name-length)
-                  (.trim)
-                  (split re-spaces))
+        parts (p :split-parts (-> line
+                                  (subs diagram-name-length)
+                                  (.trim)
+                                  (split re-spaces)))
         previous-vec (get data section [])
         color (keyword (last parts))
         info
@@ -240,23 +263,23 @@
           {:name (if (empty? diagram-name)
                    (:name (last previous-vec))
                    diagram-name)
-           :start (parse-coord data
-                               (nth parts 0)
-                               (nth parts 1))
-           :end (parse-coord data
-                             (nth parts 2)
-                             (nth parts 3))
-           :color (get-in data 
-                          [:colors color] 
-                          (parse-color (last parts)))}
+           :start (p :parse-start (parse-coord data
+                                               (nth parts 0)
+                                               (nth parts 1)))
+           :end (p :parse-end (parse-coord data
+                                           (nth parts 2)
+                                           (nth parts 3)))
+           :color (p :parse-color (get-in data 
+                                          [:colors color] 
+                                          (parse-color (last parts))))}
           (catch IllegalArgumentException e
             ;; ZNY prefixes each group with a line
             ;;  referring to the airport's name....
             nil))]
     (when (not (nil? info))
-      (assoc data 
-             section 
-             (conj previous-vec info)))))
+      (p :merge-data (assoc data 
+                            section 
+                            (conj previous-vec info))))))
 
 (defn- lazy-parse-diagram-line
   [section data line]
@@ -370,58 +393,59 @@
 (defn- parse-shapes
   [data in-type out-type]
   (def parsing-type in-type)
-  (if-let [geo-data (in-type data)]
-    (loop [geo geo-data
-           shapes []
-           iterations 1
-           this-shape []]
-      (let [last-coord (last this-shape)
-            last-meta (meta this-shape)
-            last-name (:name last-meta)
-            last-color (:color last-meta)
-            last-x (:x last-coord)
-            last-y (:y last-coord)
-            next-geos (rest geo)
-            next-line (first geo)
-            next-color (:color next-line)
-            next-name (:name next-line)
-            next-x (:x (:start next-line))
-            next-y (:y (:start next-line))
-            ;; do we continue the previous shape?
-            shape-continues?
-            (and (= next-x last-x)
-                 (= next-y last-y)
-                 (= next-color last-color))
-            next-shapes
-            (if shape-continues?
-              shapes ;; no change yet
-              (if (empty? this-shape)
-                shapes ;; begin first shape ever
-                (conj shapes 
-                      (with-bounds this-shape)))) ;; append the new shape
-            next-shape
-            (if shape-continues?
-              ;; append next coord
-              (conj this-shape (:end next-line))
-              ;; done
-              (with-meta [(:start next-line)
-                          (:end next-line)]
-                         {:color next-color
-                          :name (:name next-line)}))]
-        (cond
-          ;; if the entire thing is 0, just drop it
-          (apply = 0 (mapcat vals next-shape)) 
-          (recur next-geos next-shapes (inc iterations) [])
-          ;; nothing else? done!
-          (empty? next-geos)
-          (assoc data out-type 
-                 (conj next-shapes 
-                       (with-bounds next-shape)))
-          ;; keep going
-          :else
-          (recur next-geos next-shapes (inc iterations) next-shape))))
-    ;; no geo data; don't do anything
-    data))
+  (p :parse-shapes
+     (if-let [geo-data (in-type data)]
+       (loop [geo geo-data
+              shapes []
+              iterations 1
+              this-shape []]
+         (let [last-coord (last this-shape)
+               last-meta (meta this-shape)
+               last-name (:name last-meta)
+               last-color (:color last-meta)
+               last-x (:x last-coord)
+               last-y (:y last-coord)
+               next-geos (rest geo)
+               next-line (first geo)
+               next-color (:color next-line)
+               next-name (:name next-line)
+               next-x (:x (:start next-line))
+               next-y (:y (:start next-line))
+               ;; do we continue the previous shape?
+               shape-continues?
+               (and (= next-x last-x)
+                    (= next-y last-y)
+                    (= next-color last-color))
+               next-shapes
+               (if shape-continues?
+                 shapes ;; no change yet
+                 (if (empty? this-shape)
+                   shapes ;; begin first shape ever
+                   (conj shapes 
+                         (with-bounds this-shape)))) ;; append the new shape
+               next-shape
+               (if shape-continues?
+                 ;; append next coord
+                 (conj this-shape (:end next-line))
+                 ;; done
+                 (with-meta [(:start next-line)
+                             (:end next-line)]
+                            {:color next-color
+                             :name (:name next-line)}))]
+           (cond
+             ;; if the entire thing is 0, just drop it
+             (apply = 0 (mapcat vals next-shape)) 
+             (recur next-geos next-shapes (inc iterations) [])
+             ;; nothing else? done!
+             (empty? next-geos)
+             (assoc data out-type 
+                    (conj next-shapes 
+                          (with-bounds next-shape)))
+             ;; keep going
+             :else
+             (recur next-geos next-shapes (inc iterations) next-shape))))
+       ;; no geo data; don't do anything
+       data)))
 
 (defn load-sector-data [input]
   (with-open [reader (io/reader input)]
@@ -534,8 +558,8 @@
   (if (empty? lines)
     data
     (recur section
-           (parse-diagram-line 
-             section data (first lines))
+           (p :parse-line (parse-diagram-line 
+                            section data (first lines)))
            (rest lines))))
 
 (defn ensure-diagram-inflated
@@ -552,10 +576,11 @@
               (assoc shapes-name
                      (concat
                        (get cache shapes-name [])
-                       (-> (parse-lazy-diagram-lines 
-                             section 
-                             (dissoc data section)
-                             raw-lines)
+                       (-> (p :parse-lines 
+                              (parse-lazy-diagram-lines 
+                                section 
+                                (p :filter-data (dissoc data section))
+                                raw-lines))
                            (parse-shapes section shapes-name)
                            (get shapes-name))))))))))
 
@@ -639,3 +664,14 @@
     (def last-scene-atom data-atom) ;; NB  for testing purposes
     @(future (swap! data-atom (fn [_] (load-sector-data input))))
     scene))
+
+
+(defn- do-profile
+  "Convenience function for profiling tests"
+  [scene-data]
+  (clear-inflated-cache)
+  (profile :info :DiagramInflate
+    (dotimes [n 50]
+      (do
+        (ensure-diagram-inflated :star scene-data "+ Class B - New York")
+        (clear-inflated-cache)))))

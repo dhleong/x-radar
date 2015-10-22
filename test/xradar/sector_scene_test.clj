@@ -84,6 +84,14 @@
             (parse-coord "N042.21.18.037")))
     (is (== 42.355 
             (parse-coord "S042.21.18.000")))
+    (is (== 42.355 
+            (parse-coord "S042.21.18")))
+    (is (== 0
+            ;; found in the ZNY file
+            (parse-coord "N000.00.000")))
+    (is (== -42
+            ;; based on above
+            (parse-coord "N042.00.000")))
     (is (= {:x 42 :y 42} 
            (parse-coord scene 
                         "S042.00.00.000"
