@@ -269,9 +269,10 @@
            :end (p :parse-end (parse-coord data
                                            (nth parts 2)
                                            (nth parts 3)))
-           :color (p :parse-color (get-in data 
-                                          [:colors color] 
-                                          (parse-color (last parts))))}
+           :color (p :parse-color (or
+                                    (get-in data 
+                                            [:colors color]) 
+                                    (parse-color (last parts))))}
           (catch IllegalArgumentException e
             ;; ZNY prefixes each group with a line
             ;;  referring to the airport's name....
