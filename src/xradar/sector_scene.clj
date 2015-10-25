@@ -252,17 +252,16 @@
   (let [diagram-name (-> line
                          (subs 0 diagram-name-length)
                          (.trim))
-        parts (p :split-parts (-> line
-                                  (subs diagram-name-length)
-                                  (.trim)
-                                  (split re-spaces)))
+        parts (-> line
+                  (subs diagram-name-length)
+                  (.trim)
+                  (split re-spaces))
         previous-vec (get data section [])
         color (keyword (last parts))
         info
         (try
-          {:name (if (empty? diagram-name)
-                   (:name (last previous-vec))
-                   diagram-name)
+          {:name (p :parse-name (when (empty? diagram-name)
+                                  diagram-name))
            :start (p :parse-start (parse-coord data
                                                (nth parts 0)
                                                (nth parts 1)))
@@ -392,61 +391,60 @@
                      new-max-x new-max-y))))))))
 
 (defn- parse-shapes
-  [data in-type out-type]
+  [data in-type out-type & [known-name]]
   (def parsing-type in-type)
-  (p :parse-shapes
-     (if-let [geo-data (in-type data)]
-       (loop [geo geo-data
-              shapes []
-              iterations 1
-              this-shape []]
-         (let [last-coord (last this-shape)
-               last-meta (meta this-shape)
-               last-name (:name last-meta)
-               last-color (:color last-meta)
-               last-x (:x last-coord)
-               last-y (:y last-coord)
-               next-geos (rest geo)
-               next-line (first geo)
-               next-color (:color next-line)
-               next-name (:name next-line)
-               next-x (:x (:start next-line))
-               next-y (:y (:start next-line))
-               ;; do we continue the previous shape?
-               shape-continues?
-               (and (= next-x last-x)
-                    (= next-y last-y)
-                    (= next-color last-color))
-               next-shapes
-               (if shape-continues?
-                 shapes ;; no change yet
-                 (if (empty? this-shape)
-                   shapes ;; begin first shape ever
-                   (conj shapes 
-                         (with-bounds this-shape)))) ;; append the new shape
-               next-shape
-               (if shape-continues?
-                 ;; append next coord
-                 (conj this-shape (:end next-line))
-                 ;; done
-                 (with-meta [(:start next-line)
-                             (:end next-line)]
-                            {:color next-color
-                             :name (:name next-line)}))]
-           (cond
-             ;; if the entire thing is 0, just drop it
-             (apply = 0 (mapcat vals next-shape)) 
-             (recur next-geos next-shapes (inc iterations) [])
-             ;; nothing else? done!
-             (empty? next-geos)
-             (assoc data out-type 
-                    (conj next-shapes 
-                          (with-bounds next-shape)))
-             ;; keep going
-             :else
-             (recur next-geos next-shapes (inc iterations) next-shape))))
-       ;; no geo data; don't do anything
-       data)))
+  (if-let [geo-data (in-type data)]
+    (loop [geo geo-data
+           shapes []
+           iterations 1
+           this-shape []]
+      (let [last-coord (last this-shape)
+            last-meta (meta this-shape)
+            last-name (:name last-meta)
+            last-color (:color last-meta)
+            last-x (:x last-coord)
+            last-y (:y last-coord)
+            next-geos (rest geo)
+            next-line (first geo)
+            next-color (:color next-line)
+            next-name (:name next-line)
+            next-x (:x (:start next-line))
+            next-y (:y (:start next-line))
+            ;; do we continue the previous shape?
+            shape-continues?
+            (and (= next-x last-x)
+                 (= next-y last-y)
+                 (= next-color last-color))
+            next-shapes
+            (if shape-continues?
+              shapes ;; no change yet
+              (if (empty? this-shape)
+                shapes ;; begin first shape ever
+                (conj shapes 
+                      (with-bounds this-shape)))) ;; append the new shape
+            next-shape
+            (if shape-continues?
+              ;; append next coord
+              (conj this-shape (:end next-line))
+              ;; done
+              (with-meta [(:start next-line)
+                          (:end next-line)]
+                         {:color next-color
+                          :name (or known-name (:name next-line))}))]
+        (cond
+          ;; if the entire thing is 0, just drop it
+          (apply = 0 (mapcat vals next-shape)) 
+          (recur next-geos next-shapes (inc iterations) [])
+          ;; nothing else? done!
+          (empty? next-geos)
+          (assoc data out-type 
+                 (conj next-shapes 
+                       (with-bounds next-shape)))
+          ;; keep going
+          :else
+          (recur next-geos next-shapes (inc iterations) next-shape))))
+    ;; no geo data; don't do anything
+    data))
 
 (defn load-sector-data [input]
   (with-open [reader (io/reader input)]
@@ -559,8 +557,8 @@
   (if (empty? lines)
     data
     (recur section
-           (p :parse-line (parse-diagram-line 
-                            section data (first lines)))
+           (parse-diagram-line 
+             section data (first lines))
            (rest lines))))
 
 (defn ensure-diagram-inflated
@@ -577,12 +575,13 @@
               (assoc shapes-name
                      (concat
                        (get cache shapes-name [])
-                       (-> (p :parse-lines 
-                              (parse-lazy-diagram-lines 
-                                section 
-                                (p :filter-data (dissoc data section))
-                                raw-lines))
-                           (parse-shapes section shapes-name)
+                       (-> (parse-lazy-diagram-lines 
+                             section 
+                             (p :filter-data (dissoc data section))
+                             raw-lines)
+                           (parse-shapes 
+                             section shapes-name 
+                             diagram-name) ;; provide the name
                            (get shapes-name))))))))))
 
 (defn clear-inflated-cache
