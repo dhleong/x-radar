@@ -3,6 +3,8 @@
   xradar.sector-scene
   (:require [clojure.string :refer [lower-case split]]
             [clojure.java.io :as io]
+            [taoensso.timbre.profiling :as profiling
+             :refer (pspy pspy* profile defnp p p*)]
             [quil
              [core :as q]]
             [xradar
@@ -17,6 +19,10 @@
 (def latlon-scale-plus 1)
 (def latlon-scale-minus -1)
 
+(def diagram-name-length 26)
+
+(defonce lazy-inflated-cache (atom {}))
+
 ;;
 ;; Util methods
 ;;
@@ -24,6 +30,13 @@
 (defn as-int
   [raw]
   (Integer/parseInt raw))
+
+(defn find-point-in 
+  [data point-name]
+  (->> [:airport :ndb :vor :fixes]
+      (mapcat #(get data % []))
+      (filter #(.equalsIgnoreCase point-name (:name %)))
+      first))
 
 (defn parse-color
   [raw]
@@ -52,16 +65,46 @@
            \E latlon-scale-plus
            \S latlon-scale-plus
            \W latlon-scale-minus)
-         parts (-> coord
-                   (.substring 1)
-                   (split #"\.")
-                   (#(map as-int %)))]
-     (* sign (+ (nth parts 0) ; degrees
-                (/ (nth parts 1) 60) ; minutes
-                (/ (nth parts 2) 3600) ; seconds
-                (/ (nth parts 3) 3600000))))) ; decimal seconds
+         ; elegant but slow old method
+         ;; parts (-> coord
+         ;;           (.substring 1)
+         ;;           (split #"\.")
+         ;;           (#(map as-int %)))
+         ;; degrees (nth parts 0)
+         ;; minutes (nth parts 1)
+         ;; seconds (nth parts 2)
+         ;; dec-sec (nth parts 3 0)
+         ; less-elegant but more-efficient new method
+         ; It's DMS format; 
+         ;  degrees: 3-digits wide
+         ;  minutes: 2-digits wide
+         ;  seconds: 2-digits wide
+         ;  decimal: 3-4-digits wide
+         ; and the Decimal is sometimes omitted
+         degrees (as-int (subs coord 1 4))
+         minutes (as-int (subs coord 5 7))
+         seconds (as-int (subs coord 8 10))
+         dec-sec (if (> (count coord) 11)  ;; is there a decimal component?
+                   (as-int (subs coord 11))
+                   0)
+         ]
+     (* sign (+ degrees ; degrees
+                (/ minutes 60) ; minutes
+                (/ seconds 3600) ; seconds
+                (/ dec-sec 3600000))))) ; decimal seconds
   ([scene lat lon]
-   (map-coord scene {:x (parse-coord lon) :y (parse-coord lat)})))
+   (if (and (string? lat)
+            (< (count lat) 6)
+            (= lat lon))
+     ;; waypoint
+     (p :expand-waypoint 
+        (when-let [point (if (map? scene)
+                           (find-point-in scene lat)
+                           (find-point scene lat))]
+          (select-keys point [:x :y])))
+     ;; coordinates
+     (map-coord scene {:x (p :parse-single-coord (parse-coord lon)) 
+                       :y (p :parse-single-coord (parse-coord lat))}))))
 
 (defn- clean-line
   [line]
@@ -203,6 +246,59 @@
            (conj (get data :runway []) 
                  info))))
 
+(defn- parse-diagram-line
+  "[SID] or [STAR]"
+  [section data line]
+  (let [diagram-name (-> line
+                         (subs 0 diagram-name-length)
+                         (.trim))
+        parts (-> line
+                  (subs diagram-name-length)
+                  (.trim)
+                  (split re-spaces))
+        previous-vec (get data section [])
+        color (keyword (last parts))
+        info
+        (try
+          {:name (p :parse-name (when (empty? diagram-name)
+                                  diagram-name))
+           :start (p :parse-start (parse-coord data
+                                               (nth parts 0)
+                                               (nth parts 1)))
+           :end (p :parse-end (parse-coord data
+                                           (nth parts 2)
+                                           (nth parts 3)))
+           :color (p :parse-color (or
+                                    (get-in data 
+                                            [:colors color]) 
+                                    (parse-color (last parts))))}
+          (catch IllegalArgumentException e
+            ;; ZNY prefixes each group with a line
+            ;;  referring to the airport's name....
+            nil))]
+    (when (not (nil? info))
+      (p :merge-data (assoc data 
+                            section 
+                            (conj previous-vec info))))))
+
+(defn- lazy-parse-diagram-line
+  [section data line]
+  (let [diagram-name (-> line
+                         (subs 0 diagram-name-length)
+                         (.trim)
+                         (#(when-not (empty? %)
+                             %)))
+        section-data (get data section {})
+        info (if diagram-name
+               (with-meta [line] {:name diagram-name})
+               (when-let [last-name (:last-name section-data)]
+                 (-> (get section-data last-name)
+                     (conj line))))]
+    (when-let [diag-name (:name (meta info))]
+      (-> data
+          (assoc-in [section diag-name] info)
+          (assoc-in [section :last-name] diag-name)))))
+
 ;;
 ;; Parsing loop
 ;;
@@ -225,16 +321,20 @@
                            keyword))
     ;; data line
     (not (or (empty? line) (.startsWith line ";")))
-    (case (:mode- data)
-      :info (parse-info-line data line)
-      :vor (parse-point-line :vor data line)
-      :ndb (parse-point-line :ndb data line)
-      :airport (parse-airport-line data line)
-      :geo (parse-geo-line data line)
-      :labels (parse-label-line data line)
-      :runway (parse-runway-line data line)
-      ;; unsupported section
-      nil)))
+    (do
+      (def parsing [(:mode- data) line])
+      (case (:mode- data)
+        :info (parse-info-line data line)
+        :vor (parse-point-line :vor data line)
+        :ndb (parse-point-line :ndb data line)
+        :airport (parse-airport-line data line)
+        :geo (parse-geo-line data line)
+        :labels (parse-label-line data line)
+        :runway (parse-runway-line data line)
+        :sid (lazy-parse-diagram-line :sid data line)
+        :star (lazy-parse-diagram-line :star data line)
+        ;; unsupported section
+        nil))))
 
 (defn- load-from-reader
   [reader]
@@ -254,8 +354,10 @@
 
 (defn- with-bounds
   [shape]
-  (if (empty? shape)
-    shape
+  (cond
+    (empty? shape) shape
+    (= 1 (count shape)) shape
+    :else
     (loop [points shape
            last-min-x Long/MAX_VALUE
            last-min-y Long/MAX_VALUE
@@ -264,39 +366,48 @@
       (let [next-points (rest points)
             this-point (first points)
             this-x (:x this-point)
-            this-y (:y this-point)
-            ;; update bounds
-            new-min-x (min last-min-x this-x)
-            new-min-y (min last-min-y this-y)
-            new-max-x (max last-max-x this-x)
-            new-max-y (max last-max-y this-y)]
-        (if (empty? next-points)
-          ;; we've seen it all! update the bounds
-          (vary-meta shape 
-                     assoc 
-                     ;; ie: left, top, right, bottom
-                     :bounds [new-min-x new-min-y 
-                              new-max-x new-max-y])
-          ;; keep looking
-          (recur next-points
-                 new-min-x new-min-y
-                 new-max-x new-max-y))))))
+            this-y (:y this-point)]
+        ;; update bounds
+        (if (or (nil? this-x) (nil? this-y))
+          (do
+            ;; temp compat while we don't have
+            ;;  FIXES parsing
+            (def nil-shape [shape (meta shape)])
+            shape)
+          (let [new-min-x (min last-min-x this-x)
+                new-min-y (min last-min-y this-y)
+                new-max-x (max last-max-x this-x)
+                new-max-y (max last-max-y this-y)]
+            (if (empty? next-points)
+              ;; we've seen it all! update the bounds
+              (vary-meta shape 
+                         assoc 
+                         ;; ie: left, top, right, bottom
+                         :bounds [new-min-x new-min-y 
+                                  new-max-x new-max-y])
+              ;; keep looking
+              (recur next-points
+                     new-min-x new-min-y
+                     new-max-x new-max-y))))))))
 
 (defn- parse-shapes
-  [data]
-  (if-let [geo-data (:geo data)]
+  [data in-type out-type & [known-name]]
+  (def parsing-type in-type)
+  (if-let [geo-data (in-type data)]
     (loop [geo geo-data
            shapes []
            iterations 1
            this-shape []]
       (let [last-coord (last this-shape)
             last-meta (meta this-shape)
+            last-name (:name last-meta)
             last-color (:color last-meta)
             last-x (:x last-coord)
             last-y (:y last-coord)
             next-geos (rest geo)
             next-line (first geo)
             next-color (:color next-line)
+            next-name (:name next-line)
             next-x (:x (:start next-line))
             next-y (:y (:start next-line))
             ;; do we continue the previous shape?
@@ -313,20 +424,34 @@
                       (with-bounds this-shape)))) ;; append the new shape
             next-shape
             (if shape-continues?
-              (conj this-shape (:end next-line)) ;; append next coord
+              ;; append next coord
+              (conj this-shape (:end next-line))
+              ;; done
               (with-meta [(:start next-line)
                           (:end next-line)]
-                         {:color next-color}))]
-        (if (empty? next-geos)
-          (assoc data :geo-shapes (conj next-shapes 
-                                        (with-bounds next-shape)))
+                         {:color next-color
+                          :name (or known-name (:name next-line))}))]
+        (cond
+          ;; if the entire thing is 0, just drop it
+          (apply = 0 (mapcat vals next-shape)) 
+          (recur next-geos next-shapes (inc iterations) [])
+          ;; nothing else? done!
+          (empty? next-geos)
+          (assoc data out-type 
+                 (conj next-shapes 
+                       (with-bounds next-shape)))
+          ;; keep going
+          :else
           (recur next-geos next-shapes (inc iterations) next-shape))))
     ;; no geo data; don't do anything
     data))
 
 (defn load-sector-data [input]
   (with-open [reader (io/reader input)]
-    (parse-shapes (load-from-reader reader))))
+    (-> (load-from-reader reader)
+        (parse-shapes :geo :geo-shapes)
+        #_(parse-shapes :sid :sid-shapes)
+        #_(parse-shapes :star :star-shapes))))
 
 ;;
 ;; Art utils
@@ -398,8 +523,12 @@
            (q/text (last (:labels runway)) 0 0)))))))
 
 (defmacro draw-each
-  [mode artist]
-  `(doseq [element# (get ~'data ~mode)]
+  [mode artist & [filter-fn]]
+  `(doseq [element# ~(if filter-fn
+                       `(filter 
+                          ~filter-fn
+                          (get ~'data ~mode) )
+                       `(get ~'data ~mode))]
      (try
        (case (arity ~artist)
          1 (~artist element#)
@@ -419,10 +548,54 @@
     ;; anything else can just always be drawn
     nil))
 
+
+(defn parse-lazy-diagram-lines
+  "Given a lazy sequence of lines from
+  a single diagram, parse it into a 
+  mini data map"
+  [section data lines]
+  (if (empty? lines)
+    data
+    (recur section
+           (parse-diagram-line 
+             section data (first lines))
+           (rest lines))))
+
+(defn ensure-diagram-inflated
+  [section data diagram-name]
+  (when-not (get-in @lazy-inflated-cache 
+                    [:inflated section diagram-name])
+    (swap! 
+      lazy-inflated-cache
+      (fn [cache]
+        (let [shapes-name (keyword (str (name section) "-shapes"))
+              raw-lines (get-in data [section diagram-name])]
+          (-> cache
+              (assoc-in [:inflated section diagram-name] true)
+              (assoc shapes-name
+                     (concat
+                       (get cache shapes-name [])
+                       (-> (parse-lazy-diagram-lines 
+                             section 
+                             (p :filter-data (dissoc data section))
+                             raw-lines)
+                           (parse-shapes 
+                             section shapes-name 
+                             diagram-name) ;; provide the name
+                           (get shapes-name))))))))))
+
+(defn clear-inflated-cache
+  []
+  (swap! lazy-inflated-cache (constantly {})))
+
 (defn- do-draw-scene
   "Separate for easier tweaking in repl"
   [data profile this-zoom]
   (let [start (System/currentTimeMillis)]
+    (doseq [star (-> profile :stars)]
+      (ensure-diagram-inflated :star data star))
+    (doseq [sid (-> profile :sids)]
+      (ensure-diagram-inflated :sid data sid))
     (doseq [mode (-> profile :draw)]
       (when-not (occlude-zoom mode this-zoom)
         (case mode
@@ -431,6 +604,14 @@
           :runway (draw-each :runway draw-runway)
           ;; else, unsupported type
           nil)))
+    (let [stars (hash-set (-> profile :stars))
+          data @lazy-inflated-cache]
+      (draw-each :star-shapes draw-shape
+                (partial contains? stars)))
+    (let [sids (hash-set (-> profile :sids))
+          data @lazy-inflated-cache]
+      (draw-each :sid-shapes draw-shape
+                 (partial contains? sids)))
     (def duration (- (System/currentTimeMillis) start))))
 
 ;;
@@ -455,11 +636,9 @@
       0))
   (find-point [this point-name]
     (when (string? point-name)
-      (when-let [info (-> @data-atom :info)]
-        (->> [:airport :ndb :vor]
-             (mapcat #(get @data-atom % []))
-             (filter #(.equalsIgnoreCase point-name (:name %)))
-             first))))
+      (let [data @data-atom]
+        (when-let [info (-> data :info)]
+          (find-point-in data point-name)))))
   (loaded? [this]
     (not (empty? @data-atom))))
   
@@ -468,7 +647,11 @@
         scene (->SectorScene data-atom)]
     (def last-scene-atom data-atom) ;; NB  for testing purposes
     (future (do
-              (swap! data-atom (fn [_] (load-sector-data input)))
+              (swap! data-atom (fn [_] 
+                                 (try
+                                   (load-sector-data input)
+                                   (catch Exception e
+                                     (def last-read-exc e)))))
               (when (seq callback) 
                 ((first callback)))))
     scene))
@@ -481,3 +664,14 @@
     (def last-scene-atom data-atom) ;; NB  for testing purposes
     @(future (swap! data-atom (fn [_] (load-sector-data input))))
     scene))
+
+
+(defn- do-profile
+  "Convenience function for profiling tests"
+  [scene-data]
+  (clear-inflated-cache)
+  (profile :info :DiagramInflate
+    (dotimes [n 50]
+      (do
+        (ensure-diagram-inflated :star scene-data "+ Class B - New York")
+        (clear-inflated-cache)))))

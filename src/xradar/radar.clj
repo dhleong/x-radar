@@ -68,7 +68,9 @@
   [profile]
   (deep-merge {:arrivals []
                :departures []
-               :draw [:geo :labels :runway]
+               :sids []
+               :stars ["+ Class B - New York"]
+               :draw [:geo :labels]
                :mode (create-mode)
                :output-size 5
                :scheme schemes/default

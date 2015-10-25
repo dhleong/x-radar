@@ -5,6 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/core.incubator "0.1.3"]
+                 [com.taoensso/timbre "4.1.4"]
                  [asfiled "0.1.0-SNAPSHOT"]
                  [stubby "0.1.0-SNAPSHOT"]
                  [clj-time "0.10.0"]
