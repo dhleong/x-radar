@@ -246,6 +246,19 @@
            (conj (get data :runway []) 
                  info))))
 
+(defn- parse-fix-line
+  "[FIXES]"
+  [data line]
+  (let [parts (split line re-spaces)
+        info
+        {:name (first parts)
+         :coord (parse-coord data
+                             (nth parts 1)
+                             (nth parts 2))}]
+    (assoc data 
+           :fixes 
+           (conj (get data :fixes []) info))))
+
 (defn- parse-diagram-line
   "[SID] or [STAR]"
   [section data line]
@@ -331,6 +344,7 @@
         :geo (parse-geo-line data line)
         :labels (parse-label-line data line)
         :runway (parse-runway-line data line)
+        :fixes (parse-fix-line data line)
         :sid (lazy-parse-diagram-line :sid data line)
         :star (lazy-parse-diagram-line :star data line)
         ;; unsupported section

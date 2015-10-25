@@ -43,6 +43,10 @@
     "04L 22R 000 000 N042.00.00.000 W071.00.00.000 N043.00.00.000 W072.00.00.000\n"
     "04R 22L 036 216 N044.00.00.000 W073.00.00.000 N045.00.00.000 W074.00.00.000"))
 
+(def data-fixes
+  "[FIXES]\nMERIT N042.00.00.000 W070.00.00.000")
+
+
 (def sid-name "+ Video Map - LGA")
 (def data-sid
   (str "#define Taxiway 14737632\n"
@@ -159,7 +163,12 @@
                :magnetic [36 216]
                :start {:x (* -73 coord-scale) :y (* -44 coord-scale)}
                :end {:x (* -74 coord-scale) :y (* -45 coord-scale)}}]
-             (-> data :runway))))))
+             (-> data :runway)))))
+  (testing "[FIXES]"
+    (let [data (load-data data-fixes)]
+      (is (= [{:name "MERIT"
+               :coord {:x (* -70 coord-scale) :y (* -42 coord-scale)}}]
+             (-> data :fixes))))))
 
 (deftest shapes-test
   (testing "Single shape shapes"
