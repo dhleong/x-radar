@@ -55,7 +55,18 @@
   (my-callsign
     [this]
     (a/field conn :callsign))
-  ;; TODO push-strip!
+  (push-strip!
+    [this controller-id aircraft]
+    ;; just do both, I guess...?
+    (a/push-strip! 
+      conn 
+      controller-id
+      (:callsign aircraft)
+      (:strip aircraft))
+    (a/push-dep! 
+      conn 
+      controller-id
+      (:callsign aircraft)))
   (request-atis
     [this airport-icao]
     (a/request-metar conn airport-icao))

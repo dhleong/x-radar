@@ -13,6 +13,8 @@
 (defstub handoff-reject)
 (defstub handoff!)
 (defstub listen)
+(defstub push-dep!)
+(defstub push-strip!)
 (defstub request-atis)
 (defstub request-metar)
 (defstub send!)
