@@ -18,7 +18,16 @@
 
 ;; FIXME whatever this is. Should probably be
 ;;  taken from whatever gets returned by get-servers
-(def vatsim-port 5432)
+(def vatsim-port 6809)
+
+(defn- fake-cid
+  "We'll just use :callsign as cid, since vatsim
+  rarely uses cid in packets. If we need it, and it's
+  available, it'll be :real-cid"
+  [obj]
+  (assoc obj
+         :cid (:callsign obj)
+         :real-cid (:cid obj)))
 
 (deftype VatsimNetwork [conn controllers-atom]
   XRadarNetwork
@@ -46,10 +55,10 @@
       (zipmap 
         (map :id servers)
         servers)))
-  (handoff-accept [this cid]
-    (a/handoff-accept conn cid))
-  (handoff-reject [this cid]
-    (a/handoff-reject conn cid))
+  (handoff-accept [this proposer cid]
+    (a/handoff-accept conn proposer cid))
+  (handoff-reject [this proposer cid]
+    (a/handoff-reject conn proposer cid))
   (handoff! [this controller-id cid]
     (a/handoff! conn controller-id cid))
   (my-callsign
@@ -121,14 +130,14 @@
     ;; TODO remove aircraft on leave
     (a/listen conn
               :aircraft
-              #(update-aircraft @state-atom %))
+              #(update-aircraft @state-atom (fake-cid %)))
     ;; TODO remove controllers on leave
     (a/listen conn
               :controllers 
               #(swap!
                  controllers 
                  deep-merge
-                 {(:callsign %) %}))
+                 {(:callsign %) (fake-cid %)}))
     (a/listen conn
               :metars
               #(receive-metar! @state-atom %))
@@ -141,8 +150,8 @@
                    (receive-from-private state from text))))
     (a/listen conn
               :handoffs
-              (fn [cid]
-                (on-handoff @state-atom cid)))
+              (fn [handoff]
+                (on-handoff @state-atom (fake-cid handoff))))
     (->VatsimNetwork
      conn
      controllers)))

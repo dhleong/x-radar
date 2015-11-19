@@ -418,10 +418,10 @@
         (get-servers [this]
           {"USA-E" {:ip "97.107.135.245"}
            "USA-W" {:ip "50.116.3.203"}})
-        (handoff-accept [this cid]
+        (handoff-accept [this proposer cid]
           ;; just ignore
           nil)
-        (handoff-reject [this cid]
+        (handoff-reject [this propsoer cid]
           ;; just ignore
           nil)
         (handoff! [this controller-id cid]

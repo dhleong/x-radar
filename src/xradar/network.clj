@@ -60,10 +60,10 @@
     {:ip 'IP address'
      :location 'New York, USA'}")
   (handoff-accept
-    [this cid]
+    [this proposer cid]
     "Accept handoff of the aircraft with the given CID")
   (handoff-reject
-    [this cid]
+    [this proposer cid]
     "Reject handoff of the aircraft with the given CID")
   (handoff!
     [this controller-id cid]

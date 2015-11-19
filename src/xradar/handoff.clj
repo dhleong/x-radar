@@ -11,23 +11,26 @@
              [scene :refer :all]
              [util :refer [coord-scale deep-merge in-bounds map-coord]] ]))
 
-(defonce pending-handoffs (atom #{}))
+(defonce pending-handoffs (atom {}))
 
-(defn- clear-pending
-  "Clear a pending handoff request. Returns true
-  if it worked, else false"
+(defn clear-pending
+  "Clear a pending handoff request. Returns the
+  proposer's cid (the :from of the handoff) on success.
+  Mostly public for testing; clients should use
+  (reject-handoff)"
   [cid]
-  (if (contains? @pending-handoffs cid)
-    (let [new-pending (swap! pending-handoffs disj cid)]
+  (when-let [handoff (get @pending-handoffs cid)]
+    (let [new-pending (swap! pending-handoffs dissoc cid)]
       (when (empty? new-pending) 
         (ack-attention! :handoff))
-      true)
-    false))
+      (:from handoff))))
 
 (defn on-handoff
   "Call when a new handoff has arrived"
-  [state cid]
-  (let [new-pending (swap! pending-handoffs conj cid)]
+  [state handoff]
+  (let [new-pending (swap! pending-handoffs 
+                           assoc 
+                           (:cid handoff) handoff)]
     (when (= 1 (count new-pending)) 
       (request-attention! :topic :handoff :is-critical true))
     (when state ;; basically for testing
@@ -38,8 +41,8 @@
   Returns true when there was such a handoff
   to accept, else nil"
   [state cid]
-  (when (clear-pending cid)
-    (n/handoff-accept (:network @state) cid)
+  (when-let [proposer (clear-pending cid)]
+    (n/handoff-accept (:network @state) proposer cid)
     true))
 
 (defn propose-handoff
@@ -57,6 +60,6 @@
   Returns true when there was such a handoff
   to reject, else nil"
   [state cid]
-  (when (clear-pending cid)
-    (n/handoff-reject (:network @state) cid)
+  (when-let [proposer (clear-pending cid)]
+    (n/handoff-reject (:network @state) proposer cid)
     true))
