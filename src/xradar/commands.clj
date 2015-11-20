@@ -327,7 +327,7 @@
     (redraw state)
     (start-select (or machine {}) state
                   :items targets
-                  :to-string #(:callsign %)
+                  :to-string :callsign
                   :on-cancel 'cancel-toggle-chat
                   :on-select callback-symbol)))
 
@@ -457,7 +457,7 @@
       (start-select machine state
                     :items targets
                     :prompt "Request ATIS from:"
-                    :to-string #(:callsign %)
+                    :to-string :callsign
                     :on-cancel 'cancel-atis-request
                     :on-select 'atis)
       (doecho "No other controllers to query"))))
@@ -523,7 +523,7 @@
     (start-select machine state
                   :items targets
                   :prompt "Chat with pilot:"
-                  :to-string #(:callsign %)
+                  :to-string :callsign
                   :on-cancel 'cancel-toggle-chat
                   :on-select 'toggle-private-chat)))
 (defmethod toggle-private-chat :controller
@@ -532,7 +532,7 @@
     (start-select machine state
                   :items targets
                   :prompt "Chat with controller:"
-                  :to-string #(:callsign %)
+                  :to-string :callsign
                   :on-cancel 'cancel-toggle-chat
                   :on-select 'toggle-private-chat)))
 (defmethod toggle-private-chat :default
@@ -595,7 +595,7 @@
        (start-select machine state
                      :items targets
                      :prompt "Reply to:"
-                     :to-string #(:with-label %)
+                     :to-string :with-label
                      :on-cancel 'cancel-toggle-chat
                      :on-select 'prompt-reply-private-chat)
        (doecho "Nobody to reply to recently"))))
@@ -652,7 +652,7 @@
          (start-select machine state
                        :items targets
                        :prompt "Receiving controller:"
-                       :to-string #(:callsign %)
+                       :to-string :callsign
                        :on-cancel 'cancel-handoff
                        :on-select 'propose-handoff)
          (doecho "No other controllers to push to")))))
@@ -933,7 +933,7 @@
         (start-select machine state
           :items targets
           :prompt "Receiving controller:"
-          :to-string #(:callsign %)
+          :to-string :callsign
           :on-cancel 'cancel-push-current-strip
           :on-select 'push-current-strip-to-controller)
         (doecho "No selected strip"))
@@ -1049,9 +1049,9 @@
      (swap! state #(assoc
                      %
                      :shown-metar 
-                     (if (or (empty? raw-icao)
-                             (= icao (:shown-metar %)))
-                       nil ;; no more metar
+                     ;; when either are true, nil will end metar display
+                     (when-not (or (empty? raw-icao)
+                                   (= icao (:shown-metar %)))
                        icao)))
    (redraw state)
    (to-mode :normal))))

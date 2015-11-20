@@ -101,7 +101,7 @@
   parameter if it was packed into the int as 0xARGB"
   [pred color-int]
   (let [alpha (bit-shift-right color-int 24)]
-    (if (= 0 alpha)
+    (if (zero? alpha)
       (pred color-int)
       (pred color-int alpha))))
 

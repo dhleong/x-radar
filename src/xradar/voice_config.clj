@@ -46,8 +46,7 @@
           table (s/select frame [:#items])
           old-connections (get (:profile @state) :voice [])
           selected-index (s/selection table)
-          selection (if (nil? selected-index)
-                      nil
+          selection (when-not (nil? selected-index)
                       (nth old-connections selected-index))
           conn-value (select-keys (s/value frame) text-value-fields)
           new-connections (if selection

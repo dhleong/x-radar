@@ -48,7 +48,7 @@
     (q/fill-int (-> scheme :output :text))
     (doseq [[duration [end timer]] @all-timers]
       (let [delta (- end (System/currentTimeMillis))
-            time-left? (> delta 0)
+            time-left? (pos? delta)
             line (str
                    " " duration "|"
                    (if time-left?
@@ -58,7 +58,7 @@
                      format-times-up))
             width (q/text-width line)
             color (cond
-                    (< delta 0) (-> scheme :output :error)
+                    (neg? delta) (-> scheme :output :error)
                     (< delta 5000) (-> scheme :output :warning)
                     (< delta 30000) (-> scheme :output :outgoing)
                     :else (-> scheme :output :text) )]

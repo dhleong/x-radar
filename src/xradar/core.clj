@@ -87,10 +87,9 @@
         scene (inflate-scene profile)
         voice (inflate-voice profile)]
     (if (not-any? nil? [profile network scene voice])
-      (do
-        (swap! primary-radar 
-              (fn [_]
-                (create-radar profile scene network voice))))
+      (swap! primary-radar 
+             (fn [_]
+               (create-radar profile scene network voice)))
       (do
         (println "Error instantiating components; startup aborted")
         (System/exit 1)))))
