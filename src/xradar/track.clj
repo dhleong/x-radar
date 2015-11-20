@@ -3,20 +3,25 @@
            simplified depending on how the network
            provides tracking information"}
   xradar.track
-  (:require [xradar.network :as n]))
+  (:require [xradar
+             [network :as n]
+             [util :refer [set-toggle]]]))
 
 (defonce tracked-cids #{})
 
 (defn toggle-track
   "Returns true if we're now tracking the cid"
   [state cid]
-  (n/toggle-track! (:network @state) cid)
-  (let [updated (swap! tracked-cids 
-                       #(if (contains? %1 %2)
-                          (disj %1 %2)
-                          (conj %1 %2))
-                       cid)]
-    (contains? updated cid)))
+  (let [network (:network @state)
+        updated (swap! tracked-cids 
+                       set-toggle
+                       cid)
+        now-tracked? (contains? updated cid)]
+    (if now-tracked?
+      (n/track! network cid)
+      (n/track-drop! network cid))
+    ;; return the tracked status
+    now-tracked?))
 
 (defn tracked?
   "Check if the cid is currently tracked"

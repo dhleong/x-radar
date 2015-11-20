@@ -20,6 +20,14 @@
            (list-replace {:foo 1} {:win 4} 
                          [{:foo 1} {:bar 2} {:baz 3}])))))
 
+(deftest set-toggle-test
+  (testing "Was missing"
+    (is (= #{1 2 3}
+           (set-toggle #{1 2} 3))))
+  (testing "Was present"
+    (is (= #{1 2}
+           (set-toggle #{1 2 3} 3)))))
+
 (deftest bearing-test
   (testing "Bearing"
     (is (= (/ Math/PI 4)

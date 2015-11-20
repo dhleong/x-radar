@@ -447,7 +447,10 @@
           (future (swap! (:input @radar) #(assoc % :last-echo (str ">>" cid ": " message)))))
         (stop-request-metar [this airport-icao]
           (append-output radar "Cancel requested weather"))
-        (toggle-track! [this cid]
+        (track! [this cid]
+          ;; just ignore
+          nil)
+        (track-drop! [this cid]
           ;; just ignore
           nil)
         (update-flightplan [this aircraft]

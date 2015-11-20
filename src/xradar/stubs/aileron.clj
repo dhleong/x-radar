@@ -18,6 +18,7 @@
 (defstub request-atis)
 (defstub request-metar)
 (defstub send!)
-(defstub toggle-track!)
+(defstub track!)
+(defstub track-drop!)
 (defstub transmit!)
 (defstub update!)

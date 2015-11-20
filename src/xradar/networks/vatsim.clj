@@ -92,9 +92,12 @@
     [this airport-icao]
     ;; (a/stop-request-metar conn airport-icao)
     (throw (java.lang.UnsupportedOperationException. "Not implemented")))
-  (toggle-track!
+  (track!
     [this cid]
-    (a/toggle-track! cid))
+    (a/track! cid))
+  (track-drop!
+    [this cid]
+    (a/track-drop! cid))
   (update-flightplan
     [this aircraft]
     (a/config-pilot! conn aircraft)))

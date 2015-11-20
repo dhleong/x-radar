@@ -64,6 +64,16 @@
   []
   (some true? (map #(.isActive %) (s/all-frames))))
 
+(defn set-toggle
+  "Toggle the presence of the value
+  in the given set. In other words,
+  if the-set contains value, we return
+  the-set without value contained; otherwise,
+  we return the-set WITH the value contained."
+  [the-set value]
+  (if (contains? the-set value)
+    (disj the-set value)
+    (conj the-set value)))
 
 (defn when-all-set-enabled
   "When all views with provided ids match
